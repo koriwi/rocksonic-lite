@@ -135,15 +135,16 @@ fn strip_mp3_artwork(path: &Path) -> Result<bool> {
 
     Ok(true)
 }
-fn process_songs(
+fn process_songs<F>(
     songs: Vec<SubSonicSong>,
     library_dir: &Path,
     config: &Config,
     srv: &Server,
-) -> (Vec<PathBuf>, Vec<PathBuf>) {
-    let global_counter = AtomicU64::new(1);
-    let song_count = songs.len();
-    let pad_count = song_count.to_string().len();
+    log_status: F,
+) -> (Vec<PathBuf>, Vec<PathBuf>)
+where
+    F: Fn(SubSonicSong, bool, bool, bool) + Sync,
+{
     let new_paths: Vec<(Vec<PathBuf>, PathBuf)> = songs
         .par_iter()
         .map(
@@ -234,7 +235,6 @@ fn process_songs(
             },
         )
         .filter_map(|elem| {
-            let counter = global_counter.fetch_add(1, Ordering::AcqRel);
             let Ok(result) = elem else {
                 return None;
             };
@@ -242,26 +242,27 @@ fn process_songs(
             let song_downloaded = result.2.contains(&Action::SongDownloaded);
             let cov_downloaded = result.2.contains(&Action::CoverDownloaded);
             let cov_error = result.2.contains(&Action::CoverError);
-            let count_str = format!("[{:>width$}/{}]", counter, song_count, width = pad_count);
-            let mut status_str = String::from("");
-
-            status_str += if song_downloaded {
-                "🎵⌛"
-            } else {
-                "🎵✔️"
-            };
-            status_str += if cov_downloaded {
-                " 📷⌛"
-            } else if cov_error {
-                " 📷⚠️"
-            } else {
-                " 📷✔️"
-            };
-
-            println!(
-                "{} {} {} / {} / {}",
-                count_str, status_str, song.artist, song.album, song.title,
-            );
+            log_status(song, song_downloaded, cov_downloaded, cov_error);
+            // let count_str = format!("[{:>width$}/{}]", counter, song_count, width = pad_count);
+            // let mut status_str = String::from("");
+            //
+            // status_str += if song_downloaded {
+            //     "🎵⌛"
+            // } else {
+            //     "🎵✔️"
+            // };
+            // status_str += if cov_downloaded {
+            //     " 📷⌛"
+            // } else if cov_error {
+            //     " 📷⚠️"
+            // } else {
+            //     " 📷✔️"
+            // };
+            //
+            // println!(
+            //     "{} {} {} / {} / {}",
+            //     count_str, status_str, song.artist, song.album, song.title,
+            // );
             Some((result.0, result.3))
         })
         .collect();
@@ -333,14 +334,61 @@ fn main() -> Result<()> {
         .collect();
 
     let mut known_paths: Vec<PathBuf> = vec![];
+    let song_count: usize = song_lists.iter().map(|sl| sl.1.len()).sum();
+    let pad_count = song_count.to_string().len();
+    let global_counter = AtomicU64::new(1);
+
     for song_list in song_lists {
         let (playlist_name, songs) = song_list;
-        let (mut new_paths, audio_paths) = process_songs(songs, &library_dir, &config, &srv);
+        let (mut new_paths, mut audio_paths) = process_songs(
+            songs,
+            &library_dir,
+            &config,
+            &srv,
+            |song: SubSonicSong, song_dl: bool, cover_dl: bool, cover_err: bool| {
+                let count_str = format!(
+                    "[{:>width$}/{}]",
+                    global_counter.fetch_add(1, Ordering::AcqRel),
+                    song_count,
+                    width = pad_count
+                );
+                let mut status_str = String::from("");
+
+                status_str += if song_dl { "🎵⌛" } else { "🎵✔️" };
+                status_str += if cover_dl {
+                    " 📷⌛"
+                } else if cover_err {
+                    " 📷⚠️"
+                } else {
+                    " 📷✔️"
+                };
+
+                println!(
+                    "{} {} {} / {} / {}",
+                    count_str, status_str, song.artist, song.album, song.title,
+                );
+            },
+        );
         if config.create_playlist
             && let Some(name) = playlist_name
         {
-            let playlist: Vec<m3u::Entry> = audio_paths.iter().map(m3u::path_entry).collect();
-            let mut file = File::create(format!("{}.m3u", name))?;
+            let playlist: Vec<m3u::Entry> = audio_paths
+                .iter_mut()
+                .map(|ap| {
+                    let mut audio_path = PathBuf::from("../");
+                    audio_path.push(&ap);
+                    m3u::path_entry(audio_path)
+                })
+                .collect();
+            let mut playlist_dir = library_dir.clone();
+            playlist_dir.pop();
+            playlist_dir.push("Playlists");
+            if !fs::exists(&playlist_dir)? {
+                fs::create_dir(&playlist_dir)?;
+            }
+            let mut playlist_path = playlist_dir;
+            playlist_path.push(format!("{}.m3u", name));
+            let mut file = File::create(playlist_path)?;
             let mut writer = m3u::Writer::new(&mut file);
             for entry in &playlist {
                 writer.write_entry(entry)?;

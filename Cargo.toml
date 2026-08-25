@@ -7,6 +7,8 @@ edition = "2024"
 anyhow = "1.0.104"
 clap = { version = "4.6.6", features = ["derive"] }
 image = "0.25.10"
+lofty = "0.25.1"
+rayon = "1.12.0"
 reqwest = { version = "0.13.4", features = ["blocking"] }
 sanitize-filename = "0.6.0"
 serde = { version = "1.0.229", features = ["derive"] }

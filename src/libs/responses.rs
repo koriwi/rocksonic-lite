@@ -16,7 +16,7 @@ pub struct SubSonicErrorResponse {
     pub error: Option<SubSonicError>,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Clone)]
 pub struct SubSonicSong {
     #[serde(rename = "@id")]
     pub id: String,

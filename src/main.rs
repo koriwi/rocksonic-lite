@@ -24,6 +24,20 @@ use crate::libs::{
     server::Server,
     utils::{download_file, sanitize_filename},
 };
+
+#[derive(Parser, Debug, PartialEq, Eq)]
+enum Action {
+    SongDownloaded,
+    CoverDownloaded,
+    CoverError,
+}
+
+impl fmt::Display for Action {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 // returns the percentage
 fn check_number_size_diff(num_a: u32, num_b: u32, max_diff: f32) -> bool {
     let mut diff = 0;
@@ -39,7 +53,7 @@ fn check_number_size_diff(num_a: u32, num_b: u32, max_diff: f32) -> bool {
     diff <= abs_max_diff
 }
 
-fn process_cover(path: &Path, data: &[u8]) -> Result<()> {
+fn process_cover(path: &Path, data: &[u8]) -> Result<Option<Action>> {
     match image::guess_format(data)? {
         ImageFormat::Jpeg => {
             let cover_data_cursor = ZCursor::new(data);
@@ -60,15 +74,13 @@ fn process_cover(path: &Path, data: &[u8]) -> Result<()> {
                     image::ExtendedColorType::Rgb8,
                 )?;
                 fs::write(path, &cover_baseline)?;
-                return Ok(());
             } else {
-                fs::write(path, data)?
+                fs::write(path, data)?;
             }
+            Ok(Some(Action::CoverDownloaded))
         }
-        _ => println!("image format not supported yet"),
-    };
-    println!("Cover downloaded: {}", path.to_str().unwrap());
-    Ok(())
+        _ => Ok(Some(Action::CoverError)),
+    }
 }
 
 fn default_mp3() -> Option<u16> {
@@ -107,18 +119,6 @@ struct Args {
     config: String,
 }
 
-#[derive(Parser, Debug, PartialEq, Eq)]
-enum Action {
-    SongDownloaded,
-    CoverDownloaded,
-}
-
-impl fmt::Display for Action {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
 fn process_songs(
     songs: Vec<SubSonicSong>,
     library_dir: &Path,
@@ -134,13 +134,6 @@ fn process_songs(
             |song| -> anyhow::Result<(Vec<PathBuf>, SubSonicSong, Vec<Action>)> {
                 let mut known_paths = vec![];
                 let mut actions = vec![];
-                // println!(
-                //     "[{}][{:0>5}/{:0>5}] progress {}%",
-                //     ei,
-                //     i,
-                //     songs.len(),
-                //     i as f32 / songs.len() as f32 * 100f32
-                // );
                 let mut album_dir = library_dir.to_path_buf();
                 album_dir.push(sanitize_filename(song.artist.clone().into()));
                 known_paths.push(album_dir.clone());
@@ -151,9 +144,6 @@ fn process_songs(
                     fs::create_dir_all(&album_dir)?;
                 }
 
-                // =========================
-                // BEGIN OF COVER PROCESSING
-                // =========================
                 let mut cover_path = album_dir.clone();
                 cover_path.push("cover.jpeg");
                 known_paths.push(cover_path.clone());
@@ -173,22 +163,19 @@ fn process_songs(
                         0.1,
                     ) {
                         let cover_resp = srv.get_cover_art(&song.id, config.cover_size)?;
-                        process_cover(&cover_path, &cover_resp.bytes()?)?;
-                        actions.push(Action::CoverDownloaded);
+                        if let Some(cover_action) =
+                            process_cover(&cover_path, &cover_resp.bytes()?)?
+                        {
+                            actions.push(cover_action);
+                        }
                     }
                 } else {
                     let cover_resp = srv.get_cover_art(&song.id, config.cover_size)?;
-                    process_cover(&cover_path, &cover_resp.bytes()?)?;
-                    actions.push(Action::CoverDownloaded);
+                    if let Some(cover_action) = process_cover(&cover_path, &cover_resp.bytes()?)? {
+                        actions.push(cover_action);
+                    }
                 }
 
-                // =======================
-                // END OF COVER PROCESSING
-                // =======================
-
-                // ========================
-                // BEGIN OF SONG PROCESSING
-                // ========================
                 let mut song_path = album_dir.clone();
                 song_path.push(format!(
                     "{:0>3} {}.{}",
@@ -228,9 +215,6 @@ fn process_songs(
                 download_file(&mut song_stream, &song_path)?;
                 actions.push(Action::SongDownloaded);
                 Ok((known_paths, song.clone(), actions))
-                // ======================
-                // END OF SONG PROCESSING
-                // ======================
             },
         )
         .filter_map(|elem| {
@@ -241,18 +225,24 @@ fn process_songs(
             let song = result.1;
             let song_downloaded = result.2.contains(&Action::SongDownloaded);
             let cov_downloaded = result.2.contains(&Action::CoverDownloaded);
-            let count_str = format!(
-                "[{:>^width$}/{:>^width$}]",
-                counter,
-                song_count,
-                width = pad_count
-            );
-            let status_str = match (song_downloaded, cov_downloaded) {
-                (true, true) => "Song + Cov :",
-                (false, true) => "Cover dwnl.:",
-                (true, false) => "Song dwnl. :",
-                (false, false) => "All good   :",
+            let cov_error = result.2.contains(&Action::CoverError);
+            let count_str = format!("[{:>width$}/{}]", counter, song_count, width = pad_count);
+            let mut status_str = String::from("");
+
+            status_str += if song_downloaded {
+                "🎵⌛"
+            } else {
+                "🎵✔️"
             };
+            if cov_downloaded {
+                status_str += " 📷⌛"
+            };
+            status_str += if cov_error {
+                " 📷⚠️"
+            } else {
+                " 📷✔️"
+            };
+
             println!(
                 "{} {} {} / {} / {}",
                 count_str, status_str, song.artist, song.album, song.title,

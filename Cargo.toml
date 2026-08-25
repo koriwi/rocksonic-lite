@@ -1,0 +1,14 @@
+[package]
+name = "rocksonic-lite"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.6", features = ["derive"] }
+reqwest = { version = "0.13.4", features = ["blocking"] }
+sanitize-filename = "0.6.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde-xml-rs = "0.8.2"
+walkdir = "2.5.0"
+yaml_serde = "0.10.7"

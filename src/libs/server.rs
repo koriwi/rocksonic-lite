@@ -90,6 +90,7 @@ impl<'a> Server<'a> {
     pub fn connect(host: &'a str, username: &'a str, password: &'a str) -> Result<Self> {
         let client = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(300))
+            .http1_only()
             .connect_timeout(Duration::from_secs(15))
             .build()?;
         let server = Server {

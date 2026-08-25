@@ -6,8 +6,10 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.104"
 clap = { version = "4.6.6", features = ["derive"] }
+id3 = { version = "1.17.1", default-features = false }
 image = "0.25.10"
 lofty = "0.25.1"
+m3u = "1.0.0"
 rayon = "1.12.0"
 reqwest = { version = "0.13.4", features = ["blocking"] }
 sanitize-filename = "0.6.0"

@@ -28,6 +28,17 @@ cargo build --release
 
 The binary is at `target/release/rocksonic-lite`.
 
+## Release builds
+
+GitHub Actions tests and builds each commit for Linux, macOS Intel, macOS Apple silicon, and Windows. Push a `v*` tag to create a release for its commit:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release contains all four archives and a `SHA256SUMS` file.
+
 ## Configure
 
 Create `music.yaml`:
@@ -83,4 +94,4 @@ The configuration name sets the library path. For example, `./music.yaml` create
 
 ## Disclaimer
 
-I wrote all code without vibe coding. For now, I used vibe coding only for this README.
+I wrote the Rust code without vibe coding. I used vibe coding for this README and the CI workflow.

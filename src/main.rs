@@ -85,7 +85,7 @@ fn process_cover(path: &Path, data: &[u8]) -> Result<Option<Action>> {
 }
 
 fn default_mp3() -> Option<u16> {
-    Some(256)
+    None
 }
 fn default_cover_size() -> u16 {
     300

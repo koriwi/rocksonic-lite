@@ -1,8 +1,8 @@
 pub mod libs;
 use crate::libs::{
+    playlists::create_playlist,
     responses::SubSonicSong,
     songs::{get_song_lists, process_songs},
-    utils::sanitize_filename,
 };
 use anyhow::{Result, anyhow};
 use clap::Parser;
@@ -10,7 +10,7 @@ use libs::server;
 use serde::Deserialize;
 use std::{
     format,
-    fs::{self, File},
+    fs::{self},
     path::{Path, PathBuf},
     println,
     sync::atomic::{AtomicU64, Ordering},
@@ -58,15 +58,15 @@ fn main() -> Result<()> {
 
     // create config struct
     let config_path = Path::new(args.config.as_str());
-    let config_exists = fs::exists(config_path)?;
-    if !config_exists {
+    if !fs::exists(config_path)? {
         return Err(anyhow!(format!(
             "Could not find the config file {}",
             args.config
         )));
     }
-    let config_file = fs::read_to_string(config_path)?;
-    let config: Config = yaml_serde::from_str(&config_file)?;
+    let config = fs::read_to_string(config_path)?;
+    let config: Config = yaml_serde::from_str(&config)?;
+
     rayon::ThreadPoolBuilder::new()
         .num_threads(config.threads as usize)
         .build_global()?;
@@ -74,12 +74,12 @@ fn main() -> Result<()> {
     let srv = server::Server::connect(config.server_url, config.user, config.password)?;
 
     // build the target library path based on the config file name
-    let config_file_path = config_path.with_file_name("");
+    let config_file_dir = config_path.with_file_name("");
     let config_file_name = config_path
         .file_stem()
         .ok_or_else(|| anyhow!("config file name is too funky"))?;
 
-    let mut library_dir = config_file_path.clone();
+    let mut library_dir = config_file_dir.clone();
     library_dir.push(config_file_name);
 
     if !fs::exists(&library_dir)? {
@@ -89,15 +89,13 @@ fn main() -> Result<()> {
     let song_lists = get_song_lists(&config, &srv);
 
     let mut known_paths: Vec<PathBuf> = vec![];
-    let song_count: usize = song_lists.iter().map(|sl| sl.1.len()).sum();
+    let song_count: usize = song_lists.iter().map(|sl| sl.songs.len()).sum();
     let pad_count = song_count.to_string().len();
     let global_counter = AtomicU64::new(1);
 
     for song_list in song_lists {
-        let (playlist_name, songs) = song_list;
-
-        let (mut new_paths, mut audio_paths) = process_songs(
-            &songs,
+        let (mut new_paths, audio_paths) = process_songs(
+            &song_list.songs,
             &library_dir,
             config.cover_size,
             config.mp3,
@@ -126,51 +124,33 @@ fn main() -> Result<()> {
                 );
             },
         );
+
         if config.create_playlist
-            && let Some(name) = playlist_name
+            && let Some(playlist_name) = song_list.name
         {
-            let playlist: Vec<m3u::Entry> = audio_paths
-                .iter_mut()
-                .map(|ap| {
-                    let mut audio_path = PathBuf::from("../");
-                    audio_path.push(&ap);
-                    m3u::path_entry(audio_path)
-                })
-                .collect();
-            let mut playlist_dir = library_dir.clone();
-            playlist_dir.pop();
-            playlist_dir.push("Playlists");
-            if !fs::exists(&playlist_dir)? {
-                fs::create_dir(&playlist_dir)?;
-            }
-            let mut playlist_path = playlist_dir;
-            playlist_path.push(format!("{}.m3u", name));
-            let mut file = File::create(playlist_path)?;
-            let mut writer = m3u::Writer::new(&mut file);
-            for entry in &playlist {
-                writer.write_entry(entry)?;
-            }
+            create_playlist(&playlist_name, &audio_paths, &library_dir)?;
         }
+
         known_paths.append(&mut new_paths);
     }
+
     known_paths.push(library_dir.clone());
 
-    let walker = walkdir::WalkDir::new(&library_dir).contents_first(true);
-    for entry in walker {
-        let Ok(ent) = entry else { continue };
-        let sanitized_entry: PathBuf = ent
-            .path()
-            .iter()
-            .map(|part| sanitize_filename(part.into()))
-            .collect();
-        let found = known_paths.contains(&sanitized_entry);
+    // walks through the library and rm all unknown files
+    let walker_paths = walkdir::WalkDir::new(&library_dir).contents_first(true);
+
+    for path in walker_paths {
+        let Ok(path_entry) = path else { continue };
+
+        let found = known_paths.contains(&path_entry.path().to_path_buf());
+
         if !found {
-            if ent.path().is_file() {
-                fs::remove_file(ent.path())?;
+            if path_entry.path().is_file() {
+                fs::remove_file(path_entry.path())?;
             } else {
-                fs::remove_dir(ent.path())?;
+                fs::remove_dir(path_entry.path())?;
             }
-            println!("deleting {}", ent.path().to_str().unwrap())
+            println!("deleting {}", path_entry.path().to_str().unwrap())
         }
     }
 

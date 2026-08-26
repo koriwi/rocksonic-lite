@@ -51,22 +51,33 @@ fn strip_mp3_artwork(path: &Path) -> Result<bool> {
     Ok(true)
 }
 
-pub fn get_song_lists(config: &Config, srv: &Server) -> Vec<(Option<String>, Vec<SubSonicSong>)> {
+pub struct SongList {
+    pub name: Option<String>,
+    pub songs: Vec<SubSonicSong>,
+}
+
+pub fn get_song_lists(config: &Config, srv: &Server) -> Vec<SongList> {
     config
         .sync
         .clone()
         .into_iter()
-        .filter_map(|element| -> Option<(Option<String>, Vec<SubSonicSong>)> {
+        .filter_map(|element| -> Option<SongList> {
             let (elem_type, elem_id) = element.split_once(".")?;
             println!("element {} {}", elem_type, elem_id);
             match elem_type {
                 "playlist" => {
                     let resp = srv.get_playlist(elem_id).ok()?;
-                    Some((Some(resp.playlist.name), resp.playlist.songs))
+                    Some(SongList {
+                        name: Some(resp.playlist.name),
+                        songs: resp.playlist.songs,
+                    })
                 }
                 "album" => {
                     let resp = srv.get_album(elem_id).ok()?;
-                    Some((None, resp.album.songs))
+                    Some(SongList {
+                        name: None,
+                        songs: resp.album.songs,
+                    })
                 }
                 _ => {
                     println!("ignoring unknown type {}", elem_type);

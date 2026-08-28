@@ -94,7 +94,8 @@ fn main() -> Result<()> {
     let global_counter = AtomicU64::new(1);
 
     for song_list in song_lists {
-        let (mut new_paths, audio_paths) = process_songs(
+        //let (mut new_paths, audio_paths) = process_songs(
+        let mut song_results = process_songs(
             &song_list.songs,
             &library_dir,
             config.cover_size,
@@ -128,10 +129,10 @@ fn main() -> Result<()> {
         if config.create_playlist
             && let Some(playlist_name) = song_list.name
         {
-            create_playlist(&playlist_name, &audio_paths, &library_dir)?;
+            create_playlist(&playlist_name, &song_results.audio_paths, &library_dir)?;
         }
 
-        known_paths.append(&mut new_paths);
+        known_paths.append(&mut song_results.paths);
     }
 
     known_paths.push(library_dir.clone());

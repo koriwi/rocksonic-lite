@@ -20,7 +20,7 @@ pub fn download_file(req_res: &mut Response, file_path: &PathBuf) -> Result<()> 
 }
 
 // returns the percentage
-pub fn check_number_size_diff(num_a: u32, num_b: u32, max_diff: f32) -> bool {
+pub fn number_good_enough(num_a: u32, num_b: u32, max_diff: f32) -> bool {
     let mut diff = 0;
     let mut abs_max_diff = 0;
     if num_a < num_b {

@@ -53,7 +53,7 @@ pub fn song_needs_download(
         return Ok(true);
     };
     if !upgrade_wanted {
-        return Ok(true);
+        return Ok(false);
     }
     let Some(bitrate) = mp3 else { return Ok(false) };
     let mut song_file = File::open(song_path)?;

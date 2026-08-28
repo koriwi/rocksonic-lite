@@ -1,8 +1,7 @@
 pub mod libs;
 use crate::libs::{
-    playlists::create_playlist,
-    responses::SubSonicSong,
-    songs::{get_song_lists, process_songs},
+    playlists::create_playlist, process::process_songs, responses::SubSonicSong,
+    songs::get_song_lists,
 };
 use anyhow::{Result, anyhow};
 use clap::Parser;
@@ -17,8 +16,14 @@ use std::{
     vec,
 };
 
+fn default_upgrade_songs() -> bool {
+    false
+}
 fn default_mp3() -> Option<u16> {
     None
+}
+fn default_upgrade_covers() -> bool {
+    false
 }
 fn default_cover_size() -> u16 {
     300
@@ -35,8 +40,12 @@ pub struct Config<'a> {
     server_url: &'a str,
     user: &'a str,
     password: &'a str,
+    #[serde(default = "default_upgrade_songs")]
+    upgrade_songs: bool,
     #[serde(default = "default_mp3")]
     mp3: Option<u16>,
+    #[serde(default = "default_upgrade_covers")]
+    upgrade_covers: bool,
     #[serde(default = "default_cover_size")]
     cover_size: u16,
     sync: Vec<&'a str>,
@@ -88,17 +97,22 @@ fn main() -> Result<()> {
 
     let song_lists = get_song_lists(&config, &srv);
 
+    // this is used for finding outdated files/directories to delete them later
     let mut known_paths: Vec<PathBuf> = vec![];
+
+    // complete song count for progress indicator
     let song_count: usize = song_lists.iter().map(|sl| sl.songs.len()).sum();
+    // for counter padding
     let pad_count = song_count.to_string().len();
     let global_counter = AtomicU64::new(1);
 
     for song_list in song_lists {
-        //let (mut new_paths, audio_paths) = process_songs(
         let mut song_results = process_songs(
             &song_list.songs,
             &library_dir,
+            config.upgrade_covers,
             config.cover_size,
+            config.upgrade_songs,
             config.mp3,
             &srv,
             |song: SubSonicSong, song_dl: bool, cover_dl: bool, cover_err: bool| {
@@ -135,6 +149,7 @@ fn main() -> Result<()> {
         known_paths.append(&mut song_results.paths);
     }
 
+    // add the root dir, so we dont delete everything
     known_paths.push(library_dir.clone());
 
     // walks through the library and rm all unknown files

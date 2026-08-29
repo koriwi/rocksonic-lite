@@ -1,5 +1,5 @@
 use crate::{
-    Config,
+    config::Config,
     libs::{
         playlists::create_playlist, process::process_songs, responses::SubSonicSong, server,
         songs::get_song_lists,

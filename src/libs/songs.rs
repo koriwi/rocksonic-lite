@@ -1,5 +1,5 @@
 use crate::{
-    Config,
+    config::Config,
     libs::{responses::SubSonicSong, server::Server, utils::number_good_enough},
 };
 use anyhow::Result;

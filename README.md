@@ -47,6 +47,8 @@ Create `music.yaml`:
 server_url: https://music.example.com
 user: alice
 password: change-me
+upgrade_songs: false
+upgrade_covers: false
 cover_size: 300
 create_playlist: true
 threads: 4
@@ -61,6 +63,8 @@ sync:
 | `user` | Subsonic user name | Required |
 | `password` | Subsonic password | Required |
 | `mp3` | Optional MP3 bitrate in kbit/s | Original format |
+| `upgrade_songs` | Replace existing MP3 files when their bitrate differs from `mp3` by more than 10% | `false` |
+| `upgrade_covers` | Replace existing covers when their width differs from `cover_size` by more than 10% | `false` |
 | `cover_size` | Cover width in pixels | `300` |
 | `create_playlist` | Create an M3U file for each selected playlist | `true` |
 | `threads` | Number of download threads | `4` |
@@ -89,6 +93,11 @@ The tool downloads original audio when you omit `mp3` or set it to `null`. To re
 ```yaml
 mp3: 256
 ```
+
+By default, the tool keeps songs and covers that already exist. Set `upgrade_songs: true` to check existing MP3 files against the configured `mp3` bitrate and replace files outside the 10% tolerance. This flag has no effect when `mp3` is omitted or `null`. Set `upgrade_covers: true` to check existing covers against `cover_size` and replace covers outside the 10% tolerance.
+
+> [!NOTE]
+> These upgrade checks make synchronization slower. Without them, the tool only checks whether each destination path exists. With them enabled, it must also open and inspect every existing song or cover to read its bitrate or image width. Files outside the tolerance then take additional time to download again.
 
 The configuration name sets the library path. For example, `./music.yaml` creates `./music/`. The tool writes playlist M3U files to the current directory.
 

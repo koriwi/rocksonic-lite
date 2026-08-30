@@ -1,8 +1,9 @@
 use std::{
+    fmt::Write,
     fs, io,
     path::PathBuf,
     sync::{
-        Arc, Mutex,
+        Arc, Mutex, RwLock,
         mpsc::{Sender, channel},
     },
     thread,
@@ -10,13 +11,21 @@ use std::{
 
 use eframe::egui::{self, Color32, Label, RichText, ScrollArea, TextEdit, vec2};
 use rocksonic_lite::{SyncEvent, sync};
+#[derive(Default, Debug, PartialEq)]
+enum ActiveTab {
+    #[default]
+    Editor,
+    Log,
+}
 #[derive(Debug, Default)]
 pub struct RockSonicLite {
+    tab_active: ActiveTab,
     config_path: Option<PathBuf>,
     config_text: Option<String>,
     config_text_changed: Option<String>,
     config_save_needed: bool,
-    tx: Option<Sender<PathBuf>>,
+    log_text: Arc<RwLock<String>>,
+    tx: Option<Sender<(PathBuf, egui::Context)>>,
     sync_progress: Arc<Mutex<Option<(usize, usize)>>>,
 }
 
@@ -31,10 +40,11 @@ fn main() -> eframe::Result {
         tx: Some(tx),
         ..RockSonicLite::default()
     };
-    let thread_rs = rs.sync_progress.clone();
+    let thread_sp = rs.sync_progress.clone();
+    let thread_log_text = rs.log_text.clone();
     thread::spawn(move || {
         loop {
-            if let Ok(config_path) = rx.recv() {
+            if let Ok((config_path, ctx)) = rx.recv() {
                 sync::run_sync(&config_path, |event| {
                     if let SyncEvent::SongFinished {
                         current,
@@ -47,7 +57,7 @@ fn main() -> eframe::Result {
                         cover_error,
                     } = event
                     {
-                        let Ok(mut sp) = thread_rs.lock() else {
+                        let Ok(mut sp) = thread_sp.lock() else {
                             return;
                         };
                         if current == total {
@@ -72,11 +82,12 @@ fn main() -> eframe::Result {
                         } else {
                             " 📷✔️"
                         };
-
-                        println!(
-                            "{} {} {} / {} / {}",
+                        let mut log_text = thread_log_text.write().unwrap();
+                        log_text.push_str(&format!(
+                            "\n{} {} {} / {} / {}",
                             count_str, status_str, artist, album, title,
-                        )
+                        ));
+                        ctx.request_repaint();
                     };
                 })
                 .expect("oof");
@@ -134,7 +145,7 @@ impl eframe::App for RockSonicLite {
                                 )
                             })
                             .inner;
-                        let sync_in_progress = self.sync_progress.try_lock().unwrap().is_some();
+                        let sync_in_progress = self.sync_progress.lock().unwrap().is_some();
                         let sync_button = if sync_in_progress {
                             let progress = self.sync_progress.lock().unwrap();
                             let (current, total) = progress.unwrap();
@@ -176,34 +187,68 @@ impl eframe::App for RockSonicLite {
                 if sync_button.clicked()
                     && let Some(config_path) = self.config_path.clone()
                 {
-                    self.tx.as_ref().unwrap().send(config_path);
+                    self.tab_active = ActiveTab::Log;
+                    if let Err(e) = self
+                        .tx
+                        .as_ref()
+                        .unwrap()
+                        .send((config_path, ui.ctx().clone()))
+                    {
+                        println!("Error: {:?}", e);
+                    };
                 }
             });
         egui::CentralPanel::default().show(ui, |ui| {
+            ui.horizontal(|ui| {
+                if ui
+                    .selectable_label(self.tab_active == ActiveTab::Editor, "Config")
+                    .clicked()
+                {
+                    self.tab_active = ActiveTab::Editor;
+                };
+                if ui
+                    .selectable_label(self.tab_active == ActiveTab::Log, "Log")
+                    .clicked()
+                {
+                    self.tab_active = ActiveTab::Log;
+                }
+            });
             let config_text = if let Some(config_text) = self.config_text.as_mut() {
                 config_text
             } else {
                 &mut "".to_string()
             };
+            if self.tab_active == ActiveTab::Editor {
+                let editor = TextEdit::multiline(config_text)
+                    .code_editor()
+                    .desired_width(f32::INFINITY);
+                let editor = ui
+                    .add_enabled_ui(self.config_path.is_some(), |ui| {
+                        ScrollArea::both()
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| ui.add_sized(ui.available_size(), editor))
+                            .inner
+                    })
+                    .inner;
 
-            let editor = TextEdit::multiline(config_text)
-                .code_editor()
-                .desired_width(f32::INFINITY);
-            let editor = ui
-                .add_enabled_ui(self.config_path.is_some(), |ui| {
+                if editor.changed()
+                    && let Some(config_text) = self.config_text.as_ref()
+                    && let Some(config_text_changed) = self.config_text_changed.as_ref()
+                {
+                    self.config_save_needed = config_text != config_text_changed;
+                };
+            } else if self.tab_active == ActiveTab::Log {
+                ui.add_enabled_ui(true, |ui| {
                     ScrollArea::both()
                         .auto_shrink([false, false])
-                        .show(ui, |ui| ui.add_sized(ui.available_size(), editor))
-                        .inner
-                })
-                .inner;
-
-            if editor.changed()
-                && let Some(config_text) = self.config_text.as_ref()
-                && let Some(config_text_changed) = self.config_text_changed.as_ref()
-            {
-                self.config_save_needed = config_text != config_text_changed;
-            };
+                        .stick_to_bottom(true)
+                        .show(ui, |ui| {
+                            let text = self.log_text.read().unwrap();
+                            let mut text = text.as_str();
+                            ui.add_sized(ui.available_size(), TextEdit::multiline(&mut text))
+                        });
+                });
+            }
         });
     }
 }

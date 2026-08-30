@@ -177,7 +177,6 @@ impl eframe::App for RockSonicLite {
                     && let Some(config_path) = self.config_path.clone()
                 {
                     self.tx.as_ref().unwrap().send(config_path);
-                    // thread::spawn(f)
                 }
             });
         egui::CentralPanel::default().show(ui, |ui| {
@@ -194,7 +193,7 @@ impl eframe::App for RockSonicLite {
                 .add_enabled_ui(self.config_path.is_some(), |ui| {
                     ScrollArea::both()
                         .auto_shrink([false, false])
-                        .show(ui, |ui| ui.add(editor))
+                        .show(ui, |ui| ui.add_sized(ui.available_size(), editor))
                         .inner
                 })
                 .inner;

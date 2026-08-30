@@ -3,16 +3,26 @@ default-run = "rocksonic-lite"
 name = "rocksonic-lite"
 version = "0.1.0"
 edition = "2024"
+[features]
+default = []
+gui = ["dep:eframe", "dep:rfd"]
 
+
+[[bin]]
+name = "rocksonic-lite-gui"
+path = "src/bin/rocksonic-lite-gui.rs"
+required-features = ["gui"]
 [dependencies]
 anyhow = "1.0.104"
 clap = { version = "4.6.6", features = ["derive"] }
+eframe = { version = "0.36.1", optional = true }
 id3 = { version = "1.17.1", default-features = false }
 image = "0.25.10"
 lofty = "0.25.1"
 m3u = "1.0.0"
 rayon = "1.12.0"
 reqwest = { version = "0.13.4", features = ["blocking"] }
+rfd = { version = "0.17.2", optional = true }
 sanitize-filename = "0.6.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde-xml-rs = "0.8.2"

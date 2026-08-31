@@ -1,6 +1,6 @@
 # rocksonic-lite
 
-`rocksonic-lite` is a small Rust CLI that mirrors Subsonic playlists and albums to a local music library. It can:
+`rocksonic-lite` is a small Rust CLI and GUI that mirrors Subsonic playlists and albums to a local music library. It can:
 
 - download original audio or request MP3 transcoding;
 - store tracks as `<artist>/<album>/<track> <title>.<extension>`;
@@ -23,21 +23,21 @@
 ```sh
 git clone https://github.com/koriwi/rocksonic-lite.git
 cd rocksonic-lite
-cargo build --release
+cargo build --release --bins --features gui
 ```
 
-The binary is at `target/release/rocksonic-lite`.
+The CLI and GUI binaries are at `target/release/rocksonic-lite` and `target/release/rocksonic-lite-gui`.
 
 ## Release builds
 
-GitHub Actions tests and builds each commit for Linux, macOS Intel, macOS Apple silicon, and Windows. Push a `v*` tag to create a release for its commit:
+GitHub Actions tests and builds both the CLI and GUI for each commit on Linux, macOS Intel, macOS Apple silicon, and Windows. Push a `v*` tag to create a release for its commit:
 
 ```sh
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The release contains all four archives and a `SHA256SUMS` file.
+The release contains four platform archives and a `SHA256SUMS` file. Each archive contains both the CLI and GUI binaries.
 
 ## Configure
 
@@ -82,10 +82,16 @@ Run through Cargo:
 cargo run --release -- --config ./music.yaml
 ```
 
-Or run the binary:
+Or run the CLI binary:
 
 ```sh
 ./target/release/rocksonic-lite --config ./music.yaml
+```
+
+Run the GUI with:
+
+```sh
+./target/release/rocksonic-lite-gui
 ```
 
 The tool downloads original audio when you omit `mp3` or set it to `null`. To request MP3 transcoding at 256 kbit/s, set:

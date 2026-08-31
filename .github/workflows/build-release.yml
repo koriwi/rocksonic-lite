@@ -46,18 +46,19 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Test
-        run: cargo test --locked --release --target ${{ matrix.target }}
+      - name: Test CLI and GUI
+        run: cargo test --locked --release --target ${{ matrix.target }} --all-targets --features gui
 
-      - name: Build
-        run: cargo build --locked --release --target ${{ matrix.target }}
+      - name: Build CLI and GUI
+        run: cargo build --locked --release --target ${{ matrix.target }} --bins --features gui
 
       - name: Package Unix binary
         if: runner.os != 'Windows'
         shell: bash
         run: |
           mkdir -p dist
-          tar -C target/${{ matrix.target }}/release -czf dist/${{ matrix.archive }} rocksonic-lite
+          tar -C target/${{ matrix.target }}/release -czf dist/${{ matrix.archive }} \
+            rocksonic-lite rocksonic-lite-gui
 
       - name: Package Windows binary
         if: runner.os == 'Windows'
@@ -65,7 +66,10 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force dist
           Compress-Archive `
-            -Path target/${{ matrix.target }}/release/rocksonic-lite.exe `
+            -Path @(
+              "target/${{ matrix.target }}/release/rocksonic-lite.exe",
+              "target/${{ matrix.target }}/release/rocksonic-lite-gui.exe"
+            ) `
             -DestinationPath dist/${{ matrix.archive }}
 
       - name: Upload build

@@ -9,8 +9,17 @@
 - create M3U files for playlists; and
 - use multiple download threads.
 
+> [!NOTE]
+> The GUI is rudimentary at this stage. More quality-of-life features are planned for future releases.
+
 > [!WARNING]
 > The tool treats its output directory as a mirror. It deletes files and directories that the current configuration does not select.
+
+## GUI preview
+
+| Configuration editor | Synchronization log |
+| --- | --- |
+| ![GUI configuration editor](docs/screenshots/gui-config.png) | ![GUI synchronization log](docs/screenshots/gui-log.png) |
 
 ## Requirements
 

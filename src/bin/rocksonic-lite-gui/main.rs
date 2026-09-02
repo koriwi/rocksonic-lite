@@ -1,7 +1,7 @@
 pub mod state;
 pub mod ui;
 
-use crate::state::RockSonicLite;
+use crate::state::{RockSonicLite, SyncButtonState};
 use crate::ui::{panel_bottom, panel_central, panel_top};
 
 use eframe::egui::{self, vec2};
@@ -27,7 +27,7 @@ fn main() -> eframe::Result {
         tx: Some(tx),
         ..RockSonicLite::default()
     };
-    let thread_sp = rs.sync_progress.clone();
+    let sbs = rs.sync_button_state.clone();
     let thread_log_text = rs.log_text.clone();
     thread::spawn(move || {
         loop {
@@ -44,13 +44,13 @@ fn main() -> eframe::Result {
                         cover_error,
                     } = event
                     {
-                        let Ok(mut sp) = thread_sp.lock() else {
+                        let Ok(mut sbs) = sbs.write() else {
                             return;
                         };
                         if current == total {
-                            *sp = None;
+                            *sbs = SyncButtonState::IdleDone;
                         } else {
-                            *sp = Some((current, total));
+                            *sbs = SyncButtonState::InProgress((current, total));
                         }
                         let pad_count = total.to_string().len();
                         let count_str =

@@ -2,7 +2,7 @@ use std::fs;
 
 use eframe::egui::{self, Color32, RichText, Ui, vec2};
 
-use crate::state::{ActiveTab, RockSonicLite};
+use crate::state::{ActiveTab, RockSonicLite, SyncButtonState};
 
 fn save_button(ui: &mut Ui, state: &mut RockSonicLite) {
     let save_button = ui
@@ -25,29 +25,39 @@ fn save_button(ui: &mut Ui, state: &mut RockSonicLite) {
 }
 
 fn sync_button(ui: &mut Ui, state: &mut RockSonicLite) {
-    let sync_in_progress = state.sync_progress.lock().unwrap().is_some();
-    let sync_button = if sync_in_progress {
-        let progress = state.sync_progress.lock().unwrap();
-        let (current, total) = progress.unwrap();
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.add_enabled_ui(false, |ui| {
-                ui.add_sized(
-                    vec2(ui.min_size().x, 25.0),
-                    egui::Button::new(format!("{}/{}", current, total)),
-                )
+    let sync_button = match *state.sync_button_state.read().unwrap() {
+        SyncButtonState::InProgress((current, total)) => {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.add_enabled_ui(false, |ui| {
+                    ui.add_sized(
+                        vec2(ui.min_size().x, 25.0),
+                        egui::Button::new(format!("{}/{}", current, total)),
+                    )
+                })
+                .inner
             })
             .inner
-        })
-        .inner
-    } else {
-        let sync_enabled = !state.config_save_needed && state.config_path.is_some();
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.add_enabled_ui(sync_enabled, |ui| {
-                ui.add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("SYNC"))
+        }
+        SyncButtonState::Idle => {
+            let sync_enabled = !state.config_save_needed && state.config_path.is_some();
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.add_enabled_ui(sync_enabled, |ui| {
+                    ui.add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("SYNC"))
+                })
+                .inner
             })
             .inner
-        })
-        .inner
+        }
+        SyncButtonState::IdleDone => {
+            let sync_enabled = !state.config_save_needed && state.config_path.is_some();
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.add_enabled_ui(sync_enabled, |ui| {
+                    ui.add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("✅ SYNC"))
+                })
+                .inner
+            })
+            .inner
+        }
     };
 
     if sync_button.clicked()

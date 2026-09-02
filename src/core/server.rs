@@ -1,6 +1,6 @@
 use std::{format, time::Duration};
 
-use crate::libs::responses::{
+use crate::core::responses::{
     SubSonicAlbumResponse, SubSonicErrorResponse, SubSonicPlaylistResponse, SubSonicSong,
     SubSonicStarredResponse,
 };

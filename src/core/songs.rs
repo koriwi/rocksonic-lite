@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    libs::{responses::SubSonicSong, server::Server, utils::number_good_enough},
+    core::{responses::SubSonicSong, server::Server, utils::number_good_enough},
 };
 use anyhow::Result;
 use clap::Parser;

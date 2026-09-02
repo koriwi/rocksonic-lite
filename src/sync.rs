@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    libs::{
+    core::{
         playlists::create_playlist, process::process_songs, responses::SubSonicSong, server,
         songs::get_song_lists,
     },

@@ -11,9 +11,9 @@ gui = ["dep:eframe", "dep:rfd"]
 
 [[bin]]
 name = "rocksonic-lite-gui"
-path = "src/bin/rocksonic-lite-gui.rs"
-
+path = "src/bin/rocksonic-lite-gui/main.rs"
 required-features = ["gui"]
+
 [dependencies]
 anyhow = "1.0.104"
 clap = { version = "4.6.6", features = ["derive"] }

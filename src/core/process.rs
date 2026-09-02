@@ -1,4 +1,4 @@
-use crate::libs::{
+use crate::core::{
     covers::{cover_needs_download, process_cover},
     responses::SubSonicSong,
     server::Server,
@@ -77,7 +77,7 @@ where
                 song_path.push(format!(
                     "{:0>3} {}.{}",
                     song.track.unwrap_or(0),
-                    crate::libs::utils::sanitize_filename(song.title.clone().into())
+                    sanitize_filename(song.title.clone().into())
                         .to_str()
                         .unwrap(),
                     if mp3.is_some() { "mp3" } else { &song.suffix }

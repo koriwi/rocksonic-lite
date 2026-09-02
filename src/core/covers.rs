@@ -1,4 +1,4 @@
-use crate::libs::{songs::Action, utils::number_good_enough};
+use crate::core::{songs::Action, utils::number_good_enough};
 use anyhow::{Result, anyhow};
 use image::{ImageFormat, codecs::jpeg::JpegEncoder};
 use std::{

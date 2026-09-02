@@ -17,7 +17,8 @@ pub enum SyncButtonState {
     #[default]
     Idle,
     IdleDone,
-    InProgress((usize, usize)),
+    IdleError,
+    InProgress(Option<(usize, usize)>),
 }
 
 #[derive(Debug, Default)]

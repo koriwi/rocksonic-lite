@@ -14,20 +14,21 @@ use std::{
 };
 
 #[derive(Debug)]
+pub struct SongFinishedInfo {
+    pub current: usize,
+    pub total: usize,
+    pub artist: String,
+    pub album: String,
+    pub title: String,
+    pub song_downloaded: bool,
+    pub cover_downloaded: bool,
+    pub cover_error: bool,
+}
+
+#[derive(Debug)]
 pub enum SyncEvent {
-    Started {
-        total: usize,
-    },
-    SongFinished {
-        current: usize,
-        total: usize,
-        artist: String,
-        album: String,
-        title: String,
-        song_downloaded: bool,
-        cover_downloaded: bool,
-        cover_error: bool,
-    },
+    Started,
+    SongFinished(SongFinishedInfo),
     FileDeleted(PathBuf),
     Warning(String),
 }
@@ -36,6 +37,7 @@ pub fn run_sync<F>(config_path: &Path, emit: F) -> Result<()>
 where
     F: Fn(SyncEvent) + Sync,
 {
+    emit(SyncEvent::Started);
     let config = Config::from_path(config_path)?;
     let srv = server::Server::connect(&config.server_url, &config.user, &config.password)?;
 
@@ -61,7 +63,6 @@ where
     let song_count: usize = song_lists.iter().map(|sl| sl.songs.len()).sum();
     // for counter padding
     let global_counter = AtomicU64::new(1);
-    emit(SyncEvent::Started { total: song_count });
 
     for song_list in song_lists {
         let mut song_results = process_songs(
@@ -74,7 +75,7 @@ where
             &srv,
             config.threads as usize,
             |song: SubSonicSong, song_dl: bool, cover_dl: bool, cover_err: bool| {
-                emit(SyncEvent::SongFinished {
+                emit(SyncEvent::SongFinished(SongFinishedInfo {
                     current: global_counter.fetch_add(1, Ordering::AcqRel) as usize,
                     total: song_count,
                     artist: song.artist,
@@ -83,7 +84,7 @@ where
                     song_downloaded: song_dl,
                     cover_downloaded: cover_dl,
                     cover_error: cover_err,
-                })
+                }))
             },
         );
         if config.create_playlist

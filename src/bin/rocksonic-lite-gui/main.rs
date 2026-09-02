@@ -5,7 +5,9 @@ use crate::state::{RockSonicLite, SyncButtonState};
 use crate::ui::{panel_bottom, panel_central, panel_top};
 
 use eframe::egui::{self, vec2};
+use rocksonic_lite::sync::SongFinishedInfo;
 use rocksonic_lite::{SyncEvent, sync};
+use std::sync::{Arc, RwLock};
 use std::{sync::mpsc::channel, thread};
 
 impl eframe::App for RockSonicLite {
@@ -14,6 +16,47 @@ impl eframe::App for RockSonicLite {
         panel_bottom::render(ui, self);
         panel_central::render(ui, self);
     }
+}
+
+fn on_song_finished(
+    info: SongFinishedInfo,
+    sync_button_state: &mut SyncButtonState,
+    log_text: &mut String,
+) -> bool {
+    if info.current == info.total {
+        *sync_button_state = SyncButtonState::IdleDone;
+    } else {
+        *sync_button_state = SyncButtonState::InProgress(Some((info.current, info.total)));
+    };
+
+    let pad_count = info.total.to_string().len();
+    let count_str = format!(
+        "[{:>width$}/{}]",
+        info.current,
+        info.total,
+        width = pad_count
+    );
+    let mut status_str = String::from("");
+
+    status_str += if info.song_downloaded {
+        "🎵⌛"
+    } else {
+        "🎵✔️"
+    };
+    status_str += if info.cover_downloaded {
+        " 📷⌛"
+    } else if info.cover_error {
+        " 📷⚠️"
+    } else {
+        " 📷✔️"
+    };
+
+    log_text.push_str(&format!(
+        "\n{} {} {} / {} / {}",
+        count_str, status_str, info.artist, info.album, info.title,
+    ));
+    // ctx.request_repaint();
+    true
 }
 
 fn main() -> eframe::Result {
@@ -27,57 +70,33 @@ fn main() -> eframe::Result {
         tx: Some(tx),
         ..RockSonicLite::default()
     };
-    let sbs = rs.sync_button_state.clone();
+    let sync_button_state = rs.sync_button_state.clone();
     let thread_log_text = rs.log_text.clone();
     thread::spawn(move || {
         loop {
             if let Ok((config_path, ctx)) = rx.recv() {
-                sync::run_sync(&config_path, |event| {
-                    if let SyncEvent::SongFinished {
-                        current,
-                        total,
-                        artist,
-                        album,
-                        title,
-                        song_downloaded,
-                        cover_downloaded,
-                        cover_error,
-                    } = event
-                    {
-                        let Ok(mut sbs) = sbs.write() else {
-                            return;
-                        };
-                        if current == total {
-                            *sbs = SyncButtonState::IdleDone;
-                        } else {
-                            *sbs = SyncButtonState::InProgress((current, total));
+                if let Err(e) = sync::run_sync(&config_path, |event| {
+                    let repaint_requested = match event {
+                        SyncEvent::SongFinished(info) => {
+                            let mut sbs = sync_button_state.write().unwrap();
+                            let mut tlg = thread_log_text.write().unwrap();
+                            on_song_finished(info, &mut sbs, &mut tlg)
                         }
-                        let pad_count = total.to_string().len();
-                        let count_str =
-                            format!("[{:>width$}/{}]", current, total, width = pad_count);
-                        let mut status_str = String::from("");
-
-                        status_str += if song_downloaded {
-                            "🎵⌛"
-                        } else {
-                            "🎵✔️"
-                        };
-                        status_str += if cover_downloaded {
-                            " 📷⌛"
-                        } else if cover_error {
-                            " 📷⚠️"
-                        } else {
-                            " 📷✔️"
-                        };
-                        let mut log_text = thread_log_text.write().unwrap();
-                        log_text.push_str(&format!(
-                            "\n{} {} {} / {} / {}",
-                            count_str, status_str, artist, album, title,
-                        ));
-                        ctx.request_repaint();
+                        SyncEvent::Started => {
+                            let mut sbs = sync_button_state.write().unwrap();
+                            *sbs = SyncButtonState::InProgress(None);
+                            true
+                        }
+                        _ => todo!("uff"),
                     };
-                })
-                .expect("oof");
+                    if repaint_requested {
+                        ctx.request_repaint();
+                    }
+                }) {
+                    let mut tlg = thread_log_text.write().unwrap();
+                    tlg.push_str(&format!("Error: {:?}", e));
+                    ctx.request_repaint();
+                };
             }
         }
     });

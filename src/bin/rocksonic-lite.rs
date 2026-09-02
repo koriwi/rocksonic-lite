@@ -10,30 +10,26 @@ use std::{
 
 fn on_event(event: SyncEvent) {
     let string = match event {
-        SyncEvent::Started { total } => format!("Found {} songs. Processing them now.", total),
+        SyncEvent::Started => "Preparing the sync process...".to_string(),
         SyncEvent::FileDeleted(p) => format!("Deleting outdated file {}", p.to_str().unwrap()),
-        SyncEvent::SongFinished {
-            current,
-            total,
-            artist,
-            album,
-            title,
-            song_downloaded,
-            cover_downloaded,
-            cover_error,
-        } => {
-            let pad_count = total.to_string().len();
-            let count_str = format!("[{:>width$}/{}]", current, total, width = pad_count);
+        SyncEvent::SongFinished(info) => {
+            let pad_count = info.total.to_string().len();
+            let count_str = format!(
+                "[{:>width$}/{}]",
+                info.current,
+                info.total,
+                width = pad_count
+            );
             let mut status_str = String::from("");
 
-            status_str += if song_downloaded {
+            status_str += if info.song_downloaded {
                 "🎵⌛"
             } else {
                 "🎵✔️"
             };
-            status_str += if cover_downloaded {
+            status_str += if info.cover_downloaded {
                 " 📷⌛"
-            } else if cover_error {
+            } else if info.cover_error {
                 " 📷⚠️"
             } else {
                 " 📷✔️"
@@ -41,7 +37,7 @@ fn on_event(event: SyncEvent) {
 
             format!(
                 "{} {} {} / {} / {}",
-                count_str, status_str, artist, album, title,
+                count_str, status_str, info.artist, info.album, info.title,
             )
         }
         _ => String::from("unknown event, skipping..."),

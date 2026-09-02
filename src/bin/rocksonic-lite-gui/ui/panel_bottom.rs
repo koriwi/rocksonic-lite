@@ -26,13 +26,15 @@ fn save_button(ui: &mut Ui, state: &mut RockSonicLite) {
 
 fn sync_button(ui: &mut Ui, state: &mut RockSonicLite) {
     let sync_button = match *state.sync_button_state.read().unwrap() {
-        SyncButtonState::InProgress((current, total)) => {
+        SyncButtonState::InProgress(status) => {
+            let button_text = if let Some((current, total)) = status {
+                &format!("{}/{}", current, total)
+            } else {
+                "in progress"
+            };
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_enabled_ui(false, |ui| {
-                    ui.add_sized(
-                        vec2(ui.min_size().x, 25.0),
-                        egui::Button::new(format!("{}/{}", current, total)),
-                    )
+                    ui.add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new(button_text))
                 })
                 .inner
             })
@@ -53,6 +55,16 @@ fn sync_button(ui: &mut Ui, state: &mut RockSonicLite) {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_enabled_ui(sync_enabled, |ui| {
                     ui.add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("✅ SYNC"))
+                })
+                .inner
+            })
+            .inner
+        }
+        SyncButtonState::IdleError => {
+            let sync_enabled = !state.config_save_needed && state.config_path.is_some();
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.add_enabled_ui(sync_enabled, |ui| {
+                    ui.add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("❌ SYNC"))
                 })
                 .inner
             })

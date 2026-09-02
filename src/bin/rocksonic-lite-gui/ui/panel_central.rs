@@ -16,7 +16,7 @@ fn tab_log(ui: &mut Ui, state: &mut RockSonicLite) {
 }
 
 fn tab_editor(ui: &mut Ui, state: &mut RockSonicLite) {
-    let config_text = if let Some(config_text) = state.config_text.as_mut() {
+    let config_text = if let Some(config_text) = state.config_text_changed.as_mut() {
         config_text
     } else {
         &mut "".to_string()

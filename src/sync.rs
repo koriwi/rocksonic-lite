@@ -31,6 +31,7 @@ pub enum SyncEvent {
     SongFinished(SongFinishedInfo),
     FileDeleted(PathBuf),
     Warning(String),
+    Done,
 }
 
 pub fn run_sync<F>(config_path: &Path, emit: F) -> Result<()>
@@ -117,5 +118,6 @@ where
             // println!("deleting {}", path_entry.path().to_str().unwrap())
         }
     }
+    emit(SyncEvent::Done);
     Ok(())
 }

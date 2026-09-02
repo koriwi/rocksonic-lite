@@ -40,6 +40,7 @@ fn on_event(event: SyncEvent) {
                 count_str, status_str, info.artist, info.album, info.title,
             )
         }
+        SyncEvent::Done => "All done!".to_owned(),
         _ => String::from("unknown event, skipping..."),
     };
     println!("{}", string);

@@ -28,9 +28,9 @@ fn sync_button(ui: &mut Ui, state: &mut RockSonicLite) {
     let sync_button = match *state.sync_button_state.read().unwrap() {
         SyncButtonState::InProgress(status) => {
             let button_text = if let Some((current, total)) = status {
-                &format!("{}/{}", current, total)
+                format!("{current}/{total}")
             } else {
-                "in progress"
+                "in progress".to_owned()
             };
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_enabled_ui(false, |ui| {

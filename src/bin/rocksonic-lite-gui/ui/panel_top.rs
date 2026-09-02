@@ -14,18 +14,20 @@ pub fn render(ui: &mut Ui, state: &mut RockSonicLite) {
                     .clicked()
                 {
                     let fd = rfd::FileDialog::new();
-                    state.config_path = fd
+                    let new_config_path = fd
                         .set_title("Select the config file yaml")
                         .add_filter("RockSonicLite config file", &["yaml", "yml"])
                         .pick_file();
-                    let Some(config_path) = state.config_path.as_ref() else {
+                    let Some(config_path) = new_config_path.as_ref() else {
                         return;
                     };
                     let io::Result::Ok(config_text) = fs::read_to_string(config_path) else {
                         return;
                     };
+                    state.config_path = new_config_path;
                     state.config_text = Some(config_text);
                     state.config_text_changed = state.config_text.clone();
+                    state.config_save_needed = false;
                 };
                 ui.label("Choose config file:");
             });

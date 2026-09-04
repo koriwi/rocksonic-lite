@@ -24,7 +24,7 @@ fn default_threads() -> u16 {
     4
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 pub struct Config {
     pub server_url: String,
     pub user: String,

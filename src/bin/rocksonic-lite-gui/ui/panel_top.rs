@@ -1,8 +1,33 @@
 use std::{fs, io};
 
 use eframe::egui::{self, Ui, vec2};
+use rocksonic_lite::config::Config;
 
-use crate::state::RockSonicLite;
+use crate::state::{ConfigStruct, RockSonicLite};
+
+fn load_config(state: &mut RockSonicLite) {
+    let fd = rfd::FileDialog::new();
+    let new_config_path = fd
+        .set_title("Select the config file yaml")
+        .add_filter("RockSonicLite config file", &["yaml", "yml"])
+        .pick_file();
+    let Some(config_path) = new_config_path.as_ref() else {
+        return;
+    };
+    let io::Result::Ok(config_text) = fs::read_to_string(config_path) else {
+        return;
+    };
+    let Ok(config) = Config::from_path(config_path) else {
+        return;
+    };
+    state.config = Some(ConfigStruct {
+        config,
+        path: config_path.clone(),
+        text: config_text.clone(),
+        text_changed: config_text,
+        save_needed: false,
+    });
+}
 
 pub fn render(ui: &mut Ui, state: &mut RockSonicLite) {
     egui::Panel::top("header").exact_size(50.0).show(ui, |ui| {
@@ -13,21 +38,7 @@ pub fn render(ui: &mut Ui, state: &mut RockSonicLite) {
                     .add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("choose"))
                     .clicked()
                 {
-                    let fd = rfd::FileDialog::new();
-                    let new_config_path = fd
-                        .set_title("Select the config file yaml")
-                        .add_filter("RockSonicLite config file", &["yaml", "yml"])
-                        .pick_file();
-                    let Some(config_path) = new_config_path.as_ref() else {
-                        return;
-                    };
-                    let io::Result::Ok(config_text) = fs::read_to_string(config_path) else {
-                        return;
-                    };
-                    state.config_path = new_config_path;
-                    state.config_text = Some(config_text);
-                    state.config_text_changed = state.config_text.clone();
-                    state.config_save_needed = false;
+                    load_config(state);
                 };
                 ui.label("Choose config file:");
             });

@@ -4,6 +4,7 @@ use std::{
 };
 
 use eframe::egui;
+use rocksonic_lite::config::Config;
 
 #[derive(Default, Debug, PartialEq)]
 pub enum ActiveTab {
@@ -22,13 +23,19 @@ pub enum SyncButtonState {
 }
 
 #[derive(Debug, Default)]
+pub struct ConfigStruct {
+    pub config: Config,
+    pub path: PathBuf,
+    pub text: String,
+    pub text_changed: String,
+    pub save_needed: bool,
+}
+
+#[derive(Debug, Default)]
 pub struct RockSonicLite {
     pub tab_active: ActiveTab,
     pub sync_button_state: Arc<RwLock<SyncButtonState>>,
-    pub config_path: Option<PathBuf>,
-    pub config_text: Option<String>,
-    pub config_text_changed: Option<String>,
-    pub config_save_needed: bool,
+    pub config: Option<ConfigStruct>,
     pub log_text: Arc<RwLock<String>>,
     pub tx: Option<Sender<(PathBuf, egui::Context)>>,
 }

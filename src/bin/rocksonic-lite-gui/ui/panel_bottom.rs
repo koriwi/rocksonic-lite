@@ -5,26 +5,34 @@ use eframe::egui::{self, Color32, RichText, Ui, vec2};
 use crate::state::{ActiveTab, RockSonicLite, SyncButtonState};
 
 fn save_button(ui: &mut Ui, state: &mut RockSonicLite) {
+    let config_save_needed = state
+        .config
+        .as_ref()
+        .is_some_and(|config| config.save_needed);
     let save_button = ui
-        .add_enabled_ui(state.config_save_needed, |ui| {
+        .add_enabled_ui(config_save_needed, |ui| {
             ui.add_sized(
                 vec2(ui.min_size().x, 25.0),
                 egui::Button::new("save config"),
             )
         })
         .inner;
+
+    let Some(config) = state.config.as_mut() else {
+        return;
+    };
     if save_button.clicked() {
-        fs::write(
-            state.config_path.as_ref().unwrap(),
-            state.config_text_changed.as_ref().unwrap(),
-        )
-        .expect("couldnt save config, sad");
-        state.config_text = state.config_text_changed.clone();
-        state.config_save_needed = false;
+        fs::write(&config.path, &config.text_changed).expect("couldnt save config, sad");
+        config.text = config.text_changed.clone();
+        config.save_needed = false;
     }
 }
 
 fn sync_button(ui: &mut Ui, state: &mut RockSonicLite) {
+    let sync_enabled = state
+        .config
+        .as_ref()
+        .is_some_and(|config| !config.save_needed);
     let sync_button = match *state.sync_button_state.read().unwrap() {
         SyncButtonState::InProgress(status) => {
             let button_text = if let Some((current, total)) = status {
@@ -41,7 +49,6 @@ fn sync_button(ui: &mut Ui, state: &mut RockSonicLite) {
             .inner
         }
         SyncButtonState::Idle => {
-            let sync_enabled = !state.config_save_needed && state.config_path.is_some();
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_enabled_ui(sync_enabled, |ui| {
                     ui.add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("SYNC"))
@@ -51,7 +58,6 @@ fn sync_button(ui: &mut Ui, state: &mut RockSonicLite) {
             .inner
         }
         SyncButtonState::IdleDone => {
-            let sync_enabled = !state.config_save_needed && state.config_path.is_some();
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_enabled_ui(sync_enabled, |ui| {
                     ui.add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("✅ SYNC"))
@@ -61,7 +67,6 @@ fn sync_button(ui: &mut Ui, state: &mut RockSonicLite) {
             .inner
         }
         SyncButtonState::IdleError => {
-            let sync_enabled = !state.config_save_needed && state.config_path.is_some();
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_enabled_ui(sync_enabled, |ui| {
                     ui.add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("❌ SYNC"))
@@ -72,15 +77,16 @@ fn sync_button(ui: &mut Ui, state: &mut RockSonicLite) {
         }
     };
 
-    if sync_button.clicked()
-        && let Some(config_path) = state.config_path.clone()
-    {
+    let Some(config) = state.config.as_mut() else {
+        return;
+    };
+    if sync_button.clicked() {
         state.tab_active = ActiveTab::Log;
         if let Err(e) = state
             .tx
             .as_ref()
             .unwrap()
-            .send((config_path, ui.ctx().clone()))
+            .send((config.path.clone(), ui.ctx().clone()))
         {
             println!("Error: {:?}", e);
         };
@@ -92,7 +98,11 @@ pub fn render(ui: &mut Ui, state: &mut RockSonicLite) {
         .exact_size(40.0)
         .show(ui, |ui| {
             ui.horizontal_centered(|ui| {
-                let label = if state.config_save_needed {
+                let save_needed = state
+                    .config
+                    .as_ref()
+                    .is_some_and(|config| config.save_needed);
+                let label = if save_needed {
                     RichText::new("Config was changed").color(Color32::ORANGE)
                 } else {
                     RichText::new("All good").color(Color32::LIGHT_GREEN)

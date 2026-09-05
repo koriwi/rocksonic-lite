@@ -9,6 +9,7 @@ use rocksonic_lite::config::Config;
 #[derive(Default, Debug, PartialEq)]
 pub enum ActiveTab {
     #[default]
+    Form,
     Editor,
     Log,
 }
@@ -34,6 +35,7 @@ pub struct ConfigStruct {
 #[derive(Debug, Default)]
 pub struct RockSonicLite {
     pub tab_active: ActiveTab,
+    pub password_hidden: bool,
     pub sync_button_state: Arc<RwLock<SyncButtonState>>,
     pub config: Option<ConfigStruct>,
     pub log_text: Arc<RwLock<String>>,

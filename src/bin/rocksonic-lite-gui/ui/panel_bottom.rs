@@ -1,6 +1,7 @@
 use std::fs;
 
 use eframe::egui::{self, Color32, RichText, Ui, vec2};
+use rocksonic_lite::config::Config;
 
 use crate::state::{ActiveTab, RockSonicLite, SyncButtonState};
 
@@ -24,6 +25,8 @@ fn save_button(ui: &mut Ui, state: &mut RockSonicLite) {
     if save_button.clicked() {
         fs::write(&config.path, &config.text_changed).expect("couldnt save config, sad");
         config.text = config.text_changed.clone();
+        // TODO: change this to be loaded from memory first, if it succeeds, then write to file!
+        config.config = Config::from_path(&config.path).unwrap();
         config.save_needed = false;
     }
 }

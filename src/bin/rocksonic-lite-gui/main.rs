@@ -55,12 +55,13 @@ fn on_song_finished(
 fn main() -> eframe::Result {
     let (tx, rx) = channel();
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size(vec2(700f32, 400f32)),
+        viewport: egui::ViewportBuilder::default().with_inner_size(vec2(700f32, 700f32)),
 
         ..Default::default()
     };
     let rs = RockSonicLite {
         tx: Some(tx),
+        password_hidden: true,
         ..RockSonicLite::default()
     };
     let sync_button_state = rs.sync_button_state.clone();

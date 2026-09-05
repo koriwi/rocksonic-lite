@@ -1,12 +1,19 @@
 use eframe::egui::{
-    self, Button, Checkbox, DragValue, Label, RichText, ScrollArea, TextEdit, Ui, vec2,
+    self, Align, Button, Checkbox, DragValue, Label, Layout, Response, RichText, ScrollArea,
+    TextEdit, Ui, Widget, vec2,
 };
 
 use crate::state::{ActiveTab, RockSonicLite};
 
-// fn key_value_row(ui: &mut Ui) {
-//
-// }
+fn key_value_row(ui: &mut Ui, key: impl Widget, value: impl Widget) -> (Response, Response) {
+    ui.horizontal(|ui| {
+        (
+            ui.add_sized(vec2(200.0, 25.0), key),
+            ui.add_sized(vec2(ui.available_width(), 25.0), value),
+        )
+    })
+    .inner
+}
 
 fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
     let Some(config) = state.config.as_mut() else {
@@ -20,132 +27,130 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
 
     ui.label("Connection");
     ui.group(|ui| {
-        ui.horizontal(|ui| {
-            ui.vertical(|ui| {
-                ui.add_sized(vec2(250.0, 25.0), Label::new("Server URL"));
-                ui.add_sized(vec2(250.0, 25.0), Label::new("Username"));
-                ui.add_sized(vec2(250.0, 25.0), Label::new("Password"));
-            });
+        // Server URL
+        key_value_row(
+            ui,
+            Label::new("Server URL"),
+            TextEdit::singleline(&mut config.config.server_url),
+        );
 
-            ui.vertical(|ui| {
-                ui.add_sized(
-                    vec2(ui.available_width(), 25.0),
-                    TextEdit::singleline(&mut config.config.server_url),
+        // Username
+        key_value_row(
+            ui,
+            Label::new("Username"),
+            TextEdit::singleline(&mut config.config.user),
+        );
+
+        // Password
+        key_value_row(ui, Label::new("Password"), |ui: &mut Ui| {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                let button = Button::new(
+                    RichText::new(if state.password_hidden {
+                        "show"
+                    } else {
+                        "hide"
+                    })
+                    .monospace(),
                 );
-                ui.add_sized(
-                    vec2(ui.available_width(), 25.0),
-                    TextEdit::singleline(&mut config.config.user),
-                );
-                ui.horizontal(|ui| {
-                    let button = Button::new(
-                        RichText::new(if state.password_hidden {
-                            "show"
-                        } else {
-                            "hide"
-                        })
-                        .monospace(),
-                    );
-                    if ui.add_sized(vec2(60.0, 25.0), button).clicked() {
-                        state.password_hidden ^= true;
-                    }
-                    ui.add_sized(
-                        vec2(ui.available_width(), 25.0),
-                        TextEdit::singleline(&mut config.config.password)
-                            .password(state.password_hidden),
-                    );
-                });
-            });
-        });
-    });
-
-    ui.label("Format");
-    ui.group(|ui| {
-        ui.horizontal(|ui| {
-            ui.vertical(|ui| {
-                ui.add_sized(vec2(250.0, 25.0), Label::new("MP3 conversion"));
-                ui.add_sized(vec2(250.0, 25.0), Label::new("MP3 bitrate"));
-
-                ui.add_sized(vec2(250.0, 25.0), Label::new("Cover size"));
-            });
-            ui.vertical(|ui| {
-                match config.config.mp3 {
-                    Some(mut mp3) => {
-                        if ui
-                            .add_sized(
-                                vec2(ui.available_width(), 25.0),
-                                Checkbox::new(&mut config.config.mp3.is_some(), "enabled"),
-                            )
-                            .clicked()
-                        {
-                            config.config.mp3 = None;
-                        }
-                        ui.add_sized(vec2(ui.available_width(), 25.0), DragValue::new(&mut mp3));
-                    }
-                    None => {
-                        if ui
-                            .add_sized(
-                                vec2(ui.available_width(), 25.0),
-                                Checkbox::new(&mut config.config.mp3.is_some(), "enabled"),
-                            )
-                            .clicked()
-                        {
-                            config.config.mp3 = Some(256);
-                        }
-                        ui.add_sized(
-                            vec2(ui.available_width(), 25.0),
-                            Label::new("enable conversion to set this"),
-                        );
-                    }
-                };
-
-                ui.add_sized(
-                    vec2(ui.available_width(), 25.0),
-                    DragValue::new(&mut config.config.cover_size),
-                );
-            });
-        });
-    });
-
-    ui.label("Format");
-    ui.group(|ui| {
-        ui.horizontal(|ui| {
-            ui.vertical(|ui| {
-                ui.add_sized(vec2(250.0, 25.0), Label::new("Create playlists"));
-                ui.horizontal(|ui| {
-                    ui.add_sized(vec2(220.0, 25.0), Label::new("Entities to sync"));
-                    if ui.add_sized(vec2(25.0, 25.0), Button::new("+")).clicked() {
-                        config.config.sync.push(String::from(""));
-                    };
-                });
-            });
-            ui.vertical(|ui| {
-                if ui
-                    .add_sized(
-                        vec2(ui.available_width(), 25.0),
-                        Checkbox::new(&mut config.config.mp3.is_some(), "enabled"),
-                    )
-                    .clicked()
-                {
-                    config.config.mp3 = None;
+                if ui.add_sized(vec2(60.0, 25.0), button).clicked() {
+                    state.password_hidden ^= true;
                 }
-                ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        for i in 0..config.config.sync.len() {
-                            if ui.add_sized(vec2(25.0, 25.0), Button::new("-")).clicked() {
-                                config.config.sync.remove(i);
-                            };
-                        }
-                    });
-                    ui.vertical(|ui| {
-                        for sync in config.config.sync.iter_mut() {
-                            ui.add_sized(
-                                vec2(ui.available_width(), 25.0),
-                                TextEdit::singleline(sync),
-                            );
-                        }
-                    });
-                });
-            });
+                ui.add_sized(
+                    vec2(ui.available_width(), 25.0),
+                    TextEdit::singleline(&mut config.config.password)
+                        .password(state.password_hidden),
+                );
+            })
+            .response
+        });
+    });
+
+    ui.label("Format(song/cover)");
+    ui.columns(2, |col| {
+        col[0].group(|ui| {
+            let cnv_btn = match config.config.mp3 {
+                Some(mut mp3) => {
+                    // MP3 conversion
+                    let (_, cnv_btn) =
+                        key_value_row(ui, Label::new("MP3 conversion"), Button::new("enabled"));
+                    // MP3 bitrate
+                    key_value_row(ui, Label::new("MP3 bitrate"), DragValue::new(&mut mp3));
+                    cnv_btn
+                }
+                None => {
+                    // MP3 Conversion
+                    let (_, cnv_btn) =
+                        key_value_row(ui, Label::new("MP3 conversion"), Button::new("disabled"));
+                    // MP3 Bitrate
+                    key_value_row(
+                        ui,
+                        Label::new("MP3 bitrate"),
+                        Label::new("enable conversion to set this"),
+                    );
+                    cnv_btn
+                }
+            };
+            if cnv_btn.clicked() {
+                config.config.mp3 = match config.config.mp3 {
+                    Some(_) => None,
+                    None => Some(256),
+                };
+            }
+
+            // Upgrade Song
+            key_value_row(
+                ui,
+                Label::new("Upgrade songs"),
+                Checkbox::new(&mut config.config.upgrade_songs, "upgrade"),
+            );
+        });
+        col[1].group(|ui| {
+            // Cover size
+            key_value_row(
+                ui,
+                Label::new("Cover size"),
+                DragValue::new(&mut config.config.cover_size),
+            );
+            // Upgrade Song
+            key_value_row(
+                ui,
+                Label::new("Upgrade covers"),
+                Checkbox::new(&mut config.config.upgrade_covers, "upgrade"),
+            );
+        });
+    });
+
+    ui.label("Sync");
+    ui.group(|ui| {
+        // create playlists
+        key_value_row(
+            ui,
+            Label::new("Create playlists"),
+            Checkbox::new(&mut config.config.create_playlist, "enabled"),
+        );
+
+        // Sync entities
+        if key_value_row(ui, Label::new("Entities to sync"), Button::new("+"))
+            .1
+            .clicked()
+        {
+            config.config.sync.push(String::from(""));
+        }
+        let mut to_remove = vec![];
+        for i in 0..config.config.sync.len() {
+            if key_value_row(
+                ui,
+                Button::new("-"),
+                TextEdit::singleline(&mut config.config.sync[i]),
+            )
+            .0
+            .clicked()
+            {
+                to_remove.push(i);
+            }
+        }
+        to_remove.into_iter().for_each(|ri| {
+            config.config.sync.remove(ri);
         });
     });
 }

@@ -1,7 +1,10 @@
+use std::fs;
+
 use eframe::egui::{
     self, Align, Button, Checkbox, DragValue, Label, Layout, Response, RichText, ScrollArea,
     TextEdit, Ui, Widget, vec2,
 };
+use rocksonic_lite::config;
 
 use crate::state::{ActiveTab, RockSonicLite};
 
@@ -15,8 +18,32 @@ fn key_value_row(ui: &mut Ui, key: impl Widget, value: impl Widget) -> (Response
     .inner
 }
 
+fn new_config_button(ui: &mut Ui) {
+    ui.vertical_centered(|ui| {
+        ui.add_space(ui.available_height() / 2.0 - 40.0);
+        if ui.button("Create new config").clicked() {
+            let fd = rfd::FileDialog::new();
+            let new_config_path = fd
+                .set_title("Select the new config file location")
+                .add_filter("RockSonicLite config file", &["yaml", "yml"])
+                .save_file();
+            let Some(config_path) = new_config_path.as_ref() else {
+                return;
+            };
+            let config = config::Config::default();
+            let Ok(config_string) = yaml_serde::to_string(&config) else {
+                return;
+            };
+            // TODO: get rid of this unwrap
+            fs::write(config_path, config_string).unwrap();
+        }
+        ui.label("or load existing config");
+    });
+}
+
 fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
     let Some(config) = state.config.as_mut() else {
+        new_config_button(ui);
         return;
     };
 
@@ -136,6 +163,7 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
         {
             config.config.sync.push(String::from(""));
         }
+
         let mut to_remove = vec![];
         for i in 0..config.config.sync.len() {
             if key_value_row(
@@ -173,9 +201,7 @@ fn tab_form(ui: &mut Ui, state: &mut RockSonicLite) {
 
 fn tab_editor(ui: &mut Ui, state: &mut RockSonicLite) {
     let Some(config) = state.config.as_mut() else {
-        ui.group(|ui| {
-            ui.add_sized(ui.available_size(), Label::new("No config file loaded"));
-        });
+        new_config_button(ui);
         return;
     };
     let editor = TextEdit::multiline(&mut config.text_changed)

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     fs::{self},
     path::Path,
@@ -24,7 +24,7 @@ fn default_threads() -> u16 {
     4
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Serialize, Debug, Default)]
 pub struct Config {
     pub server_url: String,
     pub user: String,

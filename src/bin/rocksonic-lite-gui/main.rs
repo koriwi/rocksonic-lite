@@ -54,18 +54,25 @@ fn on_song_finished(
 
 fn main() -> eframe::Result {
     let (tx, rx) = channel();
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size(vec2(700f32, 700f32)),
 
+    let init_window_size = vec2(700.0, 700.0);
+    let min_window_size = vec2(700.0, 700.0);
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size(init_window_size)
+            .with_min_inner_size(min_window_size),
         ..Default::default()
     };
+
     let rs = RockSonicLite {
         tx: Some(tx),
         password_hidden: true,
         ..RockSonicLite::default()
     };
+
     let sync_button_state = rs.sync_button_state.clone();
     let thread_log_text = rs.log_text.clone();
+
     thread::spawn(move || {
         loop {
             if let Ok((config_path, ctx)) = rx.recv()

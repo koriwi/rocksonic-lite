@@ -1,24 +1,23 @@
-use std::fs;
-
+// TODO: get rid of magic numbers in this file
+use crate::state::{ActiveTab, ConfigStruct, RockSonicLite};
 use eframe::egui::{
     self, Align, Button, Checkbox, DragValue, Label, Layout, Response, RichText, ScrollArea,
     TextEdit, Ui, Widget, vec2,
 };
 use rocksonic_lite::config;
-
-use crate::state::{ActiveTab, RockSonicLite};
+use std::fs;
 
 fn key_value_row(ui: &mut Ui, key: impl Widget, value: impl Widget) -> (Response, Response) {
     ui.horizontal(|ui| {
         (
-            ui.add_sized(vec2(200.0, 25.0), key),
+            ui.add_sized(vec2(120.0, 25.0), key),
             ui.add_sized(vec2(ui.available_width(), 25.0), value),
         )
     })
     .inner
 }
 
-fn new_config_button(ui: &mut Ui) {
+fn new_config_button(ui: &mut Ui, state: &mut RockSonicLite) {
     ui.vertical_centered(|ui| {
         ui.add_space(ui.available_height() / 2.0 - 40.0);
         if ui.button("Create new config").clicked() {
@@ -36,16 +35,24 @@ fn new_config_button(ui: &mut Ui) {
             };
             // TODO: get rid of this unwrap
             fs::write(config_path, config_string).unwrap();
+            let config_text = yaml_serde::to_string(&config).unwrap();
+            state.config = Some(ConfigStruct {
+                config,
+                path: config_path.clone(),
+                text: config_text.clone(),
+                text_changed: config_text.clone(),
+                save_needed: false,
+            });
         }
-        ui.label("or load existing config");
+        ui.label("or open existing config");
+        ui.add_space(ui.available_height());
     });
 }
 
+// TODO: split this form render to make it more structured/readable
 fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
-    let Some(config) = state.config.as_mut() else {
-        new_config_button(ui);
-        return;
-    };
+    // this can be safely unwrapped
+    let config = state.config.as_mut().unwrap();
 
     ui.add(Label::new(
         RichText::new("THIS DOESN'T WORK YET, USE EDITOR INSTEAD")
@@ -91,6 +98,7 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
             .response
         });
     });
+    ui.add_space(25.0);
 
     ui.label("Format(song/cover)");
     ui.columns(2, |col| {
@@ -144,8 +152,11 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
                 Label::new("Upgrade covers"),
                 Checkbox::new(&mut config.config.upgrade_covers, "upgrade"),
             );
+            ui.add_space(25.0);
+            // key_value_row(ui, egui, value)
         });
     });
+    ui.add_space(25.0);
 
     ui.label("Sync");
     ui.group(|ui| {
@@ -200,29 +211,30 @@ fn tab_form(ui: &mut Ui, state: &mut RockSonicLite) {
 }
 
 fn tab_editor(ui: &mut Ui, state: &mut RockSonicLite) {
-    let Some(config) = state.config.as_mut() else {
-        new_config_button(ui);
-        return;
-    };
-    let editor = TextEdit::multiline(&mut config.text_changed)
-        .code_editor()
-        .desired_width(f32::INFINITY);
-    // TODO: remove add_enabled_ui, not needed anymore
-    let editor = ui
-        .add_enabled_ui(true, |ui| {
-            ScrollArea::both()
-                .auto_shrink([false, false])
-                .show(ui, |ui| ui.add_sized(ui.available_size(), editor))
-                .inner
-        })
-        .inner;
+    ui.group(|ui| {
+        // this can be safely unwrapped
+        let config = state.config.as_mut().unwrap();
 
-    let Some(config) = state.config.as_mut() else {
-        return;
-    };
-    if editor.changed() {
-        config.save_needed = config.text != config.text_changed;
-    };
+        let editor = TextEdit::multiline(&mut config.text_changed)
+            .code_editor()
+            .desired_width(f32::INFINITY);
+        // TODO: remove add_enabled_ui, not needed anymore
+        let editor = ui
+            .add_enabled_ui(true, |ui| {
+                ScrollArea::both()
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| ui.add_sized(ui.available_size(), editor))
+                    .inner
+            })
+            .inner;
+
+        let Some(config) = state.config.as_mut() else {
+            return;
+        };
+        if editor.changed() {
+            config.save_needed = config.text != config.text_changed;
+        };
+    });
 }
 
 fn tab_log(ui: &mut Ui, state: &mut RockSonicLite) {
@@ -264,6 +276,13 @@ pub fn render(ui: &mut Ui, state: &mut RockSonicLite) {
                 }
             });
         });
+
+        if state.config.is_none() {
+            ui.group(|ui| {
+                new_config_button(ui, state);
+            });
+            return;
+        };
         match state.tab_active {
             ActiveTab::Form => tab_form(ui, state),
             ActiveTab::Editor => tab_editor(ui, state),

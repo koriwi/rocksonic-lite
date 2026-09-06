@@ -1,6 +1,6 @@
 use std::{fs, io};
 
-use eframe::egui::{self, Ui, vec2};
+use eframe::egui::{self, Align, Ui, vec2};
 use rocksonic_lite::config::Config;
 
 use crate::state::{ConfigStruct, RockSonicLite};
@@ -31,16 +31,30 @@ fn load_config(state: &mut RockSonicLite) {
 
 pub fn render(ui: &mut Ui, state: &mut RockSonicLite) {
     egui::Panel::top("header").exact_size(50.0).show(ui, |ui| {
-        ui.horizontal_centered(|ui| {
-            ui.heading("RockSonic Lite");
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        ui.columns(3, |cols| {
+            cols[0].horizontal_centered(|ui| {
+                ui.heading("RockSonic Lite");
+            });
+            cols[1].centered_and_justified(|ui| {
+                ui.label(
+                    state
+                        .config
+                        .as_ref()
+                        .map_or("no config file loaded", |config| {
+                            config.path.to_str().as_ref().unwrap()
+                        }),
+                );
+            });
+            cols[2].with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                // ui.horizontal_centered(|ui| {
                 if ui
-                    .add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("choose"))
+                    .add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new("open"))
                     .clicked()
                 {
                     load_config(state);
                 };
-                ui.label("Choose config file:");
+                ui.label("Config file");
+                // });
             });
         });
     });

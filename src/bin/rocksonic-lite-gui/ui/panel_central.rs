@@ -51,6 +51,7 @@ fn new_config_button(ui: &mut Ui, state: &mut RockSonicLite) {
 
 // TODO: split this form render to make it more structured/readable
 fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
+    let mut changed = false;
     // this can be safely unwrapped
     let config = state.config.as_mut().unwrap();
 
@@ -62,21 +63,25 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
     ui.label("Connection");
     ui.group(|ui| {
         // Server URL
-        key_value_row(
+        changed |= key_value_row(
             ui,
             Label::new("Server URL"),
             TextEdit::singleline(&mut config.config.server_url),
-        );
+        )
+        .1
+        .changed();
 
         // Username
-        key_value_row(
+        changed |= key_value_row(
             ui,
             Label::new("Username"),
             TextEdit::singleline(&mut config.config.user),
-        );
+        )
+        .1
+        .changed();
 
         // Password
-        key_value_row(ui, Label::new("Password"), |ui: &mut Ui| {
+        changed |= key_value_row(ui, Label::new("Password"), |ui: &mut Ui| {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let button = Button::new(
                     RichText::new(if state.password_hidden {
@@ -93,23 +98,27 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
                     vec2(ui.available_width(), 25.0),
                     TextEdit::singleline(&mut config.config.password)
                         .password(state.password_hidden),
-                );
+                )
             })
             .response
-        });
+        })
+        .1
+        .changed();
     });
     ui.add_space(25.0);
 
     ui.label("Format(song/cover)");
     ui.columns(2, |col| {
         col[0].group(|ui| {
-            let cnv_btn = match config.config.mp3 {
-                Some(mut mp3) => {
+            let cnv_btn = match config.config.mp3.as_mut() {
+                Some(mp3) => {
                     // MP3 conversion
                     let (_, cnv_btn) =
                         key_value_row(ui, Label::new("MP3 conversion"), Button::new("enabled"));
                     // MP3 bitrate
-                    key_value_row(ui, Label::new("MP3 bitrate"), DragValue::new(&mut mp3));
+                    changed |= key_value_row(ui, Label::new("MP3 bitrate"), DragValue::new(mp3))
+                        .1
+                        .changed();
                     cnv_btn
                 }
                 None => {
@@ -126,6 +135,7 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
                 }
             };
             if cnv_btn.clicked() {
+                changed |= true;
                 config.config.mp3 = match config.config.mp3 {
                     Some(_) => None,
                     None => Some(256),
@@ -133,25 +143,31 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
             }
 
             // Upgrade Song
-            key_value_row(
+            changed |= key_value_row(
                 ui,
                 Label::new("Upgrade songs"),
                 Checkbox::new(&mut config.config.upgrade_songs, "upgrade"),
-            );
+            )
+            .1
+            .changed();
         });
         col[1].group(|ui| {
             // Cover size
-            key_value_row(
+            changed |= key_value_row(
                 ui,
                 Label::new("Cover size"),
                 DragValue::new(&mut config.config.cover_size),
-            );
+            )
+            .1
+            .changed();
             // Upgrade Song
-            key_value_row(
+            changed |= key_value_row(
                 ui,
                 Label::new("Upgrade covers"),
                 Checkbox::new(&mut config.config.upgrade_covers, "upgrade"),
-            );
+            )
+            .1
+            .changed();
             ui.add_space(25.0);
             // key_value_row(ui, egui, value)
         });
@@ -161,17 +177,20 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
     ui.label("Sync");
     ui.group(|ui| {
         // create playlists
-        key_value_row(
+        changed |= key_value_row(
             ui,
             Label::new("Create playlists"),
             Checkbox::new(&mut config.config.create_playlist, "enabled"),
-        );
+        )
+        .1
+        .changed();
 
         // Sync entities
         if key_value_row(ui, Label::new("Entities to sync"), Button::new("+"))
             .1
             .clicked()
         {
+            changed |= true;
             config.config.sync.push(String::from(""));
         }
 
@@ -185,6 +204,7 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
             .0
             .clicked()
             {
+                changed |= true;
                 to_remove.push(i);
             }
         }
@@ -192,6 +212,10 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
             config.config.sync.remove(ri);
         });
     });
+    if changed {
+        config.text_changed = yaml_serde::to_string(&config.config).unwrap();
+        config.save_needed = true;
+    }
 }
 
 fn tab_form(ui: &mut Ui, state: &mut RockSonicLite) {

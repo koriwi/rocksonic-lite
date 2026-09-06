@@ -34,6 +34,7 @@ pub struct ConfigStruct {
 
 #[derive(Debug, Default)]
 pub struct RockSonicLite {
+    pub error: Option<String>,
     pub tab_active: ActiveTab,
     pub password_hidden: bool,
     pub sync_button_state: Arc<RwLock<SyncButtonState>>,

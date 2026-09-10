@@ -24,7 +24,7 @@ fn default_threads() -> u16 {
     4
 }
 
-#[derive(Deserialize, Serialize, Debug, Default)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
     pub server_url: String,
     pub user: String,
@@ -47,5 +47,22 @@ impl Config {
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self> {
         let yaml = fs::read_to_string(path)?;
         Ok(yaml_serde::from_str(&yaml)?)
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            server_url: String::new(),
+            user: String::new(),
+            password: String::new(),
+            upgrade_songs: default_upgrade_songs(),
+            mp3: default_mp3(),
+            upgrade_covers: default_upgrade_covers(),
+            cover_size: default_cover_size(),
+            sync: Vec::new(),
+            create_playlist: default_create_playlist(),
+            threads: default_threads(),
+        }
     }
 }

@@ -105,7 +105,7 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
                         .password(state.password_hidden),
                 )
             })
-            .response
+            .inner
         });
     });
     ui.add_space(25.0);

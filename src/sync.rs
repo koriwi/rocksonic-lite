@@ -7,10 +7,10 @@ use crate::{
 };
 use anyhow::{Result, anyhow};
 use std::{
+    collections::HashSet,
     fs,
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
-    vec,
 };
 
 #[derive(Debug)]
@@ -58,7 +58,7 @@ where
     let song_lists = get_song_lists(&config, &srv);
 
     // this is used for finding outdated files/directories to delete them later
-    let mut known_paths: Vec<PathBuf> = vec![];
+    let mut known_paths: HashSet<PathBuf> = HashSet::new();
 
     // complete song count for progress indicator
     let song_count: usize = song_lists.iter().map(|sl| sl.songs.len()).sum();
@@ -66,7 +66,7 @@ where
     let global_counter = AtomicU64::new(1);
 
     for song_list in song_lists {
-        let mut song_results = process_songs(
+        let song_results = process_songs(
             &song_list.songs,
             &library_dir,
             config.upgrade_covers,
@@ -94,11 +94,11 @@ where
             create_playlist(&playlist_name, &song_results.audio_paths, &library_dir)?;
         }
 
-        known_paths.append(&mut song_results.paths);
+        known_paths.extend(song_results.paths);
     }
 
     // add the root dir, so we dont delete everything
-    known_paths.push(library_dir.clone());
+    known_paths.insert(library_dir.clone());
 
     // walks through the library and rm all unknown files
     let walker_paths = walkdir::WalkDir::new(&library_dir).contents_first(true);

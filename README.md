@@ -17,9 +17,9 @@
 
 ## GUI preview
 
-| Configuration editor | Synchronization log |
-| --- | --- |
-| ![GUI configuration editor](docs/screenshots/gui-config.png) | ![GUI synchronization log](docs/screenshots/gui-log.png) |
+| Configuration form | Configuration editor | Synchronization log |
+| --- | --- | --- |
+| ![GUI configuration form](docs/screenshots/gui-form.png) | ![GUI configuration editor](docs/screenshots/gui-config.png) | ![GUI synchronization log](docs/screenshots/gui-log.png) |
 
 ## Requirements
 

@@ -76,10 +76,9 @@ fn create_paths(library_dir: &Path, sb_song: &SubSonicSong, mp3: Option<u16>) ->
     }
 }
 
-/*
-* does the heavy lifting, dowloading songs if missing or upgrade needed,
-* cover downloading, etc
-*/
+/// does the heavy lifting, dowloading songs if missing or upgrade needed,
+/// cover downloading, etc
+/// TODO: reduce param count
 pub fn process_songs<F>(
     songs: &Vec<SubSonicSong>,
     library_dir: &Path,

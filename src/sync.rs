@@ -43,6 +43,7 @@ where
     let srv = server::Server::connect(&config.server_url, &config.user, &config.password)?;
 
     // build the target library path based on the config file name
+    // TODO: put this in a nice function
     let config_file_dir = config_path.with_file_name("");
     let config_file_name = config_path
         .file_stem()
@@ -60,9 +61,7 @@ where
     // this is used for finding outdated files/directories to delete them later
     let mut known_paths: HashSet<PathBuf> = HashSet::new();
 
-    // complete song count for progress indicator
     let song_count: usize = song_lists.iter().map(|sl| sl.songs.len()).sum();
-    // for counter padding
     let global_counter = AtomicU64::new(1);
 
     for song_list in song_lists {
@@ -97,12 +96,13 @@ where
         known_paths.extend(song_results.paths);
     }
 
-    // add the root dir, so we dont delete everything
+    // don't forget to add the root dir, so we dont delete everything.
+    // ask me how I know
     known_paths.insert(library_dir.clone());
 
-    // walks through the library and rm all unknown files
+    // checks every file in the library if it is wanted, if not -> rm
+    // TODO: put this into a nice little function maybe
     let walker_paths = walkdir::WalkDir::new(&library_dir).contents_first(true);
-
     for path in walker_paths {
         let Ok(path_entry) = path else { continue };
 
@@ -115,9 +115,9 @@ where
                 fs::remove_dir(path_entry.path())?;
             }
             emit(SyncEvent::FileDeleted(path_entry.path().to_path_buf()));
-            // println!("deleting {}", path_entry.path().to_str().unwrap())
         }
     }
+
     emit(SyncEvent::Done);
     Ok(())
 }

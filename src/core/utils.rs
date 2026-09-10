@@ -19,7 +19,7 @@ pub fn download_file(req_res: &mut Response, file_path: &PathBuf) -> Result<()> 
     Ok(())
 }
 
-// returns the percentage
+/// tells you if the numbers are within a specific threshold
 pub fn number_good_enough(num_a: u32, num_b: u32, max_diff: f32) -> bool {
     let mut diff = 0;
     let mut abs_max_diff = 0;

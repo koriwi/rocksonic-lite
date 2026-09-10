@@ -48,7 +48,6 @@ pub fn song_needs_download(
     mp3: Option<u16>,
     upgrade_wanted: bool,
 ) -> anyhow::Result<bool> {
-    // check if existing song has the correct bitrate within a percentage
     if !fs::exists(song_path)? {
         return Ok(true);
     };
@@ -61,8 +60,9 @@ pub fn song_needs_download(
         &mut song_file,
         ParseOptions::new().read_tags(false).read_cover_art(false),
     )?;
+
+    // check if existing song satisfies wanted bitrate
     if number_good_enough(bitrate as u32, mp3.properties().audio_bitrate(), 0.1) {
-        // return Ok((known_paths, song.clone(), actions, audio_path));
         return Ok(false);
     };
     Ok(true)

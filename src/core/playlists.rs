@@ -18,6 +18,7 @@ pub fn create_playlist(
         })
         .collect();
 
+    // TODO: construct this from an iterator (maybe with a function)
     let mut playlist_dir: PathBuf = library_dir.into();
     playlist_dir.pop(); // go up one directory, so to step out of the music dir
     playlist_dir.push("Playlists"); // append this to point to a sibling dir on the same level
@@ -26,6 +27,7 @@ pub fn create_playlist(
         fs::create_dir(&playlist_dir)?;
     }
 
+    // TODO: construct this from an iterator (maybe within a function)
     let mut playlist_path = playlist_dir;
     playlist_path.push(format!("{}.m3u", name)); // points now to the playlist file
 

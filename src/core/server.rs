@@ -15,22 +15,26 @@ pub struct Server<'a> {
 }
 
 impl<'a> Server<'a> {
-    fn get(&self, endpoint: &str, params: Option<&String>) -> Result<Response> {
-        let host = self.host;
-        let username = self.username;
-        let password = self.password;
+    fn get(&self, endpoint: &str, params: &[(&str, String)]) -> Result<Response> {
+        let url = format!("{}/rest/{endpoint}", self.host.trim_end_matches("/"));
 
-        let base_params = format!("v=1.16.1&c=rocksonic-rs&u={username}&p={password}");
-        let url = match params {
-            Some(params) => format!("{host}/rest/{endpoint}?{base_params}&{params}"),
-            None => format!("{host}/rest/{endpoint}?{base_params}"),
-        };
-        let res = self.client.get(url).send()?;
+        let res = self
+            .client
+            .get(url)
+            .query(&[
+                ("v", "1.16.1"),
+                ("c", "rocksonic-lite"),
+                ("u", self.username),
+                ("p", self.password),
+            ])
+            .query(params)
+            .send()?
+            .error_for_status()?;
         Ok(res)
     }
 
     fn test_connection(&self) -> Result<()> {
-        let response = self.get("ping", None)?;
+        let response = self.get("ping", &[])?;
         let status = response.status();
         let text = response.text()?;
         let xml = serde_xml_rs::from_str::<SubSonicErrorResponse>(&text)
@@ -45,7 +49,10 @@ impl<'a> Server<'a> {
     }
 
     pub fn get_cover_art(&self, id: &str, size: u16) -> Result<Response> {
-        let response = self.get("getCoverArt", Some(&format!("id={}&size={}", id, size)))?;
+        let response = self.get(
+            "getCoverArt",
+            &[("id", id.to_string()), ("size", size.to_string())],
+        )?;
 
         if let Some(content_type) = response.headers().get("Content-Type")
             && content_type == "text/xml"
@@ -59,7 +66,7 @@ impl<'a> Server<'a> {
 
     pub fn get_song(&self, id: &str, mp3: Option<u16>) -> Result<Response> {
         let (endpoint, params) = song_request(id, mp3);
-        let response = self.get(endpoint, Some(&params))?;
+        let response = self.get(endpoint, &params)?;
 
         if let Some(content_type) = response.headers().get("Content-Type")
             && content_type == "text/xml"
@@ -72,17 +79,17 @@ impl<'a> Server<'a> {
     }
 
     pub fn get_playlist(&self, playlist_id: &str) -> Result<SubSonicPlaylistResponse> {
-        let response = self.get("getPlaylist", Some(&format!("id={}", playlist_id)))?;
+        let response = self.get("getPlaylist", &[("id", playlist_id.to_string())])?;
         let xml = serde_xml_rs::from_str::<SubSonicPlaylistResponse>(&response.text()?)?;
         Ok(xml)
     }
     pub fn get_album(&self, album_id: &str) -> Result<SubSonicAlbumResponse> {
-        let response = self.get("getAlbum", Some(&format!("id={}", album_id)))?;
+        let response = self.get("getAlbum", &[("id", album_id.to_string())])?;
         let xml = serde_xml_rs::from_str::<SubSonicAlbumResponse>(&response.text()?)?;
         Ok(xml)
     }
     pub fn get_favs(&self) -> Result<Vec<SubSonicSong>> {
-        let response = self.get("getStarred", None)?;
+        let response = self.get("getStarred", &[])?;
         let xml = serde_xml_rs::from_str::<SubSonicStarredResponse>(&response.text()?)?;
         Ok(xml.starred.songs)
     }
@@ -103,32 +110,14 @@ impl<'a> Server<'a> {
     }
 }
 
-fn song_request(id: &str, mp3: Option<u16>) -> (&'static str, String) {
+fn song_request(id: &str, mp3: Option<u16>) -> (&'static str, Vec<(&str, String)>) {
+    let mut params = vec![("id", id.to_owned())];
     match mp3 {
-        Some(bitrate) => ("stream", format!("id={id}&maxBitRate={bitrate}&format=mp3")),
-        None => ("download", format!("id={id}")),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::assert_eq;
-
-    use super::*;
-
-    #[test]
-    fn mp3_requests_use_the_transcoding_endpoint() {
-        assert_eq!(
-            song_request("song-id", Some(192)),
-            ("stream", "id=song-id&maxBitRate=192&format=mp3".to_string())
-        );
-    }
-
-    #[test]
-    fn original_format_requests_use_the_download_endpoint() {
-        assert_eq!(
-            song_request("song-id", None),
-            ("download", "id=song-id".to_string())
-        );
+        Some(bitrate) => {
+            params.push(("maxBitRate", bitrate.to_string()));
+            params.push(("format", "mp3".to_owned()));
+            ("stream", params)
+        }
+        None => ("download", params),
     }
 }

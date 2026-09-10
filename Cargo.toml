@@ -28,7 +28,7 @@ image = { version = "0.25.10", features = ["jpeg"], default-features = false }
 lofty = "0.25.1"
 m3u = "1.0.0"
 rayon = "1.12.0"
-reqwest = { version = "0.13.4", features = ["blocking"] }
+reqwest = { version = "0.13.4", features = ["blocking", "query"] }
 rfd = { version = "0.17.2", optional = true }
 sanitize-filename = "0.6.0"
 serde = { version = "1.0.229", features = ["derive"] }

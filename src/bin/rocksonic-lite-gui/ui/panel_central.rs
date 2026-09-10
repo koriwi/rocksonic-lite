@@ -5,7 +5,7 @@ use eframe::egui::{
     TextEdit, Ui, Widget, vec2,
 };
 use rocksonic_lite::config;
-use std::{any::Any, error::Error, fs};
+use std::fs;
 #[derive(Default)]
 struct Form {
     changed: bool,
@@ -68,11 +68,6 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
     let mut form = Form::default();
     // this can be safely unwrapped
     let config = state.config.as_mut().unwrap();
-
-    ui.add(Label::new(
-        RichText::new("THIS DOESN'T WORK YET, USE EDITOR INSTEAD")
-            .color(eframe::egui::Color32::RED),
-    ));
 
     ui.label("Connection");
     ui.group(|ui| {
@@ -176,6 +171,13 @@ fn render_form(ui: &mut Ui, state: &mut RockSonicLite) {
 
     ui.label("Sync");
     ui.group(|ui| {
+        // sync threads
+        form.field(
+            ui,
+            "Threads",
+            DragValue::new(&mut config.config.threads).range(1..=128),
+        );
+
         // create playlists
         form.field(
             ui,

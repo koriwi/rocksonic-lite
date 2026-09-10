@@ -4,9 +4,8 @@ use eframe::egui::{
     self, Align, Button, Checkbox, DragValue, Label, Layout, Response, RichText, ScrollArea,
     TextEdit, Ui, Widget, vec2,
 };
-use egui_modal::Modal;
 use rocksonic_lite::config;
-use std::fs;
+use std::{any::Any, error::Error, fs};
 #[derive(Default)]
 struct Form {
     changed: bool,
@@ -294,7 +293,7 @@ pub fn render(ui: &mut Ui, state: &mut RockSonicLite) {
                             state.tab_active = ActiveTab::Form;
                         }
                         Err(e) => {
-                            state.error = Some(format!("{:?}", e));
+                            state.error = Some(e.to_string());
                         }
                     }
                 };

@@ -41,7 +41,6 @@ fn on_event(event: SyncEvent) {
             )
         }
         SyncEvent::Done => "All done!".to_owned(),
-        _ => String::from("unknown event, skipping..."),
     };
     println!("{}", string);
 }
@@ -64,6 +63,8 @@ fn main() -> Result<()> {
             args.config
         )));
     }
-    sync::run_sync(config_path, on_event)?;
+    if let Err(e) = sync::run_sync(config_path, on_event) {
+        println!("[Error] {}", e);
+    }
     Ok(())
 }

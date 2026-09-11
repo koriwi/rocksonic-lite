@@ -89,21 +89,20 @@ fn main() -> eframe::Result {
                         }
                         SyncEvent::FileDeleted(path) => {
                             tlg.push_str(&format!(
-                                "Deleting stale file {}",
+                                "\nDeleting stale file {}",
                                 path.to_str().unwrap()
                             ));
                         }
                         SyncEvent::Done => {
                             *sbs = SyncButtonState::IdleDone;
                         }
-                        _ => todo!("uff"),
                     };
                     ctx.request_repaint();
                 })
             {
                 let mut tlg = thread_log_text.write().unwrap();
                 let mut sbs = sync_button_state.write().unwrap();
-                tlg.push_str(&format!("\nError: {:?}", e));
+                tlg.push_str(&format!("\n[Error] {:?}", e));
                 *sbs = SyncButtonState::IdleError;
                 ctx.request_repaint();
             };

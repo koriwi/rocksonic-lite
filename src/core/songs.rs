@@ -2,7 +2,7 @@ use crate::{
     config::Config,
     core::{responses::SubSonicSong, server::Server, utils::number_good_enough},
 };
-use anyhow::Result;
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use id3::{Tag, TagLike, no_tag_ok};
 use lofty::{config::ParseOptions, file::AudioFile, mpeg::MpegFile};
@@ -68,37 +68,42 @@ pub fn song_needs_download(
     Ok(true)
 }
 
+#[derive(Debug)]
 pub struct SongList {
     pub name: Option<String>,
     pub songs: Vec<SubSonicSong>,
 }
 
-pub fn get_song_lists(config: &Config, srv: &Server) -> Vec<SongList> {
+pub fn get_song_lists(config: &Config, srv: &Server) -> Vec<Result<SongList>> {
     config
         .sync
         .clone()
         .into_iter()
-        .filter_map(|element| -> Option<SongList> {
-            let (elem_type, elem_id) = element.split_once(".")?;
-            println!("element {} {}", elem_type, elem_id);
+        .map(|element| -> Result<SongList> {
+            let (elem_type, elem_id) = element.split_once(".").ok_or(anyhow!("invalid element"))?;
+
             match elem_type {
                 "playlist" => {
-                    let resp = srv.get_playlist(elem_id).ok()?;
-                    Some(SongList {
+                    let resp = srv
+                        .get_playlist(elem_id)
+                        .with_context(|| format!("failed to fetch element {element}"))?;
+                    Ok(SongList {
                         name: Some(resp.playlist.name),
                         songs: resp.playlist.songs,
                     })
                 }
                 "album" => {
-                    let resp = srv.get_album(elem_id).ok()?;
-                    Some(SongList {
+                    let resp = srv
+                        .get_album(elem_id)
+                        .with_context(|| format!("failed to fetch element {element}"))?;
+                    Ok(SongList {
                         name: None,
                         songs: resp.album.songs,
                     })
                 }
                 _ => {
                     println!("ignoring unknown type {}", elem_type);
-                    None
+                    Err(anyhow!("unknown sync type"))
                 }
             }
         })

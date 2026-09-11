@@ -30,7 +30,6 @@ pub enum SyncEvent {
     Started,
     SongFinished(SongFinishedInfo),
     FileDeleted(PathBuf),
-    Warning(String),
     Done,
 }
 
@@ -61,10 +60,22 @@ where
     // this is used for finding outdated files/directories to delete them later
     let mut known_paths: HashSet<PathBuf> = HashSet::new();
 
-    let song_count: usize = song_lists.iter().map(|sl| sl.songs.len()).sum();
+    let song_count: usize = song_lists
+        .iter()
+        .filter_map(|sl| Some(sl.as_ref().ok()?.songs.len()))
+        .sum();
     let global_counter = AtomicU64::new(1);
+    let mut success_list = vec![];
+    let mut error_list = vec![];
 
-    for song_list in song_lists {
+    for rsl in song_lists {
+        match rsl {
+            Ok(sl) => success_list.push(sl),
+            Err(e) => error_list.push(e),
+        };
+    }
+
+    for song_list in success_list {
         let song_results = process_songs(
             &song_list.songs,
             &library_dir,
@@ -96,6 +107,17 @@ where
         known_paths.extend(song_results.paths);
     }
 
+    if !error_list.is_empty() {
+        let details = error_list
+            .iter()
+            .map(|e| format!(" - {:#}", e))
+            .collect::<Vec<String>>()
+            .join("\n");
+        return Err(anyhow!(
+            "Skipping cleanup. Elements failed to sync:\n{details}"
+        ));
+    }
+
     // don't forget to add the root dir, so we dont delete everything.
     // ask me how I know
     known_paths.insert(library_dir.clone());
@@ -117,7 +139,6 @@ where
             emit(SyncEvent::FileDeleted(path_entry.path().to_path_buf()));
         }
     }
-
     emit(SyncEvent::Done);
     Ok(())
 }

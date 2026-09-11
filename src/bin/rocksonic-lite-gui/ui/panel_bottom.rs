@@ -1,6 +1,6 @@
-use std::fs;
+use std::{f32::consts::TAU, fs};
 
-use eframe::egui::{self, Color32, RichText, Ui, vec2};
+use eframe::egui::{self, Color32, Image, RichText, Ui, include_image, vec2};
 use rocksonic_lite::config::Config;
 
 use crate::state::{ActiveTab, RockSonicLite, SyncButtonState};
@@ -43,9 +43,18 @@ fn sync_button(ui: &mut Ui, state: &mut RockSonicLite) {
             } else {
                 "in progress".to_owned()
             };
+            let time = ui.input(|i| i.time);
+            let angle = (time % 1.0) as f32 * TAU;
+            let spinner = Image::new(include_image!("../assets/spinner.png"))
+                .fit_to_exact_size(vec2(24.0, 24.0))
+                .rotate(angle, vec2(0.5, 0.5));
+            ui.ctx().request_repaint();
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_enabled_ui(false, |ui| {
-                    ui.add_sized(vec2(ui.min_size().x, 25.0), egui::Button::new(button_text))
+                    ui.add_sized(
+                        vec2(ui.min_size().x, 25.0),
+                        egui::Button::image_and_text(spinner, button_text),
+                    )
                 })
                 .inner
             })

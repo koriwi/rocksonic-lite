@@ -1,6 +1,6 @@
 use std::{fs, io};
 
-use eframe::egui::{self, Align, Ui, vec2};
+use eframe::egui::{self, Align, Image, TextureOptions, Ui, vec2};
 use rocksonic_lite::config::Config;
 
 use crate::state::{ConfigStruct, RockSonicLite};
@@ -33,6 +33,14 @@ pub fn render(ui: &mut Ui, state: &mut RockSonicLite) {
     egui::Panel::top("header").exact_size(50.0).show(ui, |ui| {
         ui.columns(3, |cols| {
             cols[0].horizontal_centered(|ui| {
+                egui::Frame::new().inner_margin(4).show(ui, |ui| {
+                    ui.add(
+                        Image::from(egui::include_image!("../assets/logo.png")).texture_options(
+                            TextureOptions::LINEAR
+                                .with_mipmap_mode(Some(egui::TextureFilter::Linear)),
+                        ),
+                    );
+                });
                 ui.heading("RockSonic Lite");
             });
             cols[1].centered_and_justified(|ui| {

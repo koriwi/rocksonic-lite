@@ -11,6 +11,7 @@ use std::{sync::mpsc::channel, thread};
 
 impl eframe::App for RockSonicLite {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui_extras::install_image_loaders(ui.ctx());
         panel_top::render(ui, self);
         panel_bottom::render(ui, self);
         panel_central::render(ui, self);

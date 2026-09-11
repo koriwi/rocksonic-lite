@@ -1,8 +1,8 @@
 // TODO: get rid of magic numbers in this file
 use crate::state::{ActiveTab, ConfigStruct, RockSonicLite};
 use eframe::egui::{
-    self, Align, Button, Checkbox, DragValue, Label, Layout, Response, RichText, ScrollArea,
-    TextEdit, Ui, Widget, vec2,
+    self, Align, Button, Checkbox, Color32, DragValue, Image, Label, Layout, Rect, Response,
+    RichText, ScrollArea, TextEdit, Ui, Widget, include_image, vec2,
 };
 use rocksonic_lite::config;
 use std::fs;
@@ -281,6 +281,17 @@ fn tab_log(ui: &mut Ui, state: &mut RockSonicLite) {
 
 pub fn render(ui: &mut Ui, state: &mut RockSonicLite) {
     egui::CentralPanel::default().show(ui, |ui| {
+        let area = ui.max_rect();
+        let bg_image = Image::new(include_image!("../assets/logo.png"))
+            .maintain_aspect_ratio(true)
+            .fit_to_exact_size(area.size())
+            .tint(Color32::from_white_alpha(3));
+
+        if let Some(size) = bg_image.load_and_calc_size(ui, area.size()) {
+            let rect = Rect::from_center_size(area.center(), size - vec2(100.0, 100.0));
+            bg_image.paint_at(ui, rect);
+        }
+
         ui.group(|ui| {
             ui.horizontal(|ui| {
                 if ui

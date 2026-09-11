@@ -1,5 +1,7 @@
 # rocksonic-lite
 
+![rocksonic-lite-logo](./src/bin/rocksonic-lite-gui/assets/logo256.png)
+
 `rocksonic-lite` is a small Rust CLI and GUI that mirrors Subsonic playlists and albums to a local music library. It can:
 
 - download original audio or request MP3 transcoding;
@@ -17,8 +19,8 @@
 
 ## GUI preview
 
-| Configuration form | Configuration editor | Synchronization log |
-| --- | --- | --- |
+| Configuration form                                       | Configuration editor                                         | Synchronization log                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------- |
 | ![GUI configuration form](docs/screenshots/gui-form.png) | ![GUI configuration editor](docs/screenshots/gui-config.png) | ![GUI synchronization log](docs/screenshots/gui-log.png) |
 
 ## Requirements
@@ -66,18 +68,18 @@ sync:
   - album.97bc21de
 ```
 
-| Key | Meaning | Default |
-| --- | --- | --- |
-| `server_url` | Server base URL, without `/rest` | Required |
-| `user` | Subsonic user name | Required |
-| `password` | Subsonic password | Required |
-| `mp3` | Optional MP3 bitrate in kbit/s | Original format |
-| `upgrade_songs` | Replace existing MP3 files when their bitrate differs from `mp3` by more than 10% | `false` |
-| `upgrade_covers` | Replace existing covers when their width differs from `cover_size` by more than 10% | `false` |
-| `cover_size` | Cover width in pixels | `300` |
-| `create_playlist` | Create an M3U file for each selected playlist | `true` |
-| `threads` | Number of download threads | `4` |
-| `sync` | Entries in `playlist.<id>` or `album.<id>` form | Required |
+| Key               | Meaning                                                                             | Default         |
+| ----------------- | ----------------------------------------------------------------------------------- | --------------- |
+| `server_url`      | Server base URL, without `/rest`                                                    | Required        |
+| `user`            | Subsonic user name                                                                  | Required        |
+| `password`        | Subsonic password                                                                   | Required        |
+| `mp3`             | Optional MP3 bitrate in kbit/s                                                      | Original format |
+| `upgrade_songs`   | Replace existing MP3 files when their bitrate differs from `mp3` by more than 10%   | `false`         |
+| `upgrade_covers`  | Replace existing covers when their width differs from `cover_size` by more than 10% | `false`         |
+| `cover_size`      | Cover width in pixels                                                               | `300`           |
+| `create_playlist` | Create an M3U file for each selected playlist                                       | `true`          |
+| `threads`         | Number of download threads                                                          | `4`             |
+| `sync`            | Entries in `playlist.<id>` or `album.<id>` form                                     | Required        |
 
 The tool creates M3U files only for `playlist.<id>` entries. It does not create them for `album.<id>` entries.
 

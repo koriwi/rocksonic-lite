@@ -40,7 +40,6 @@ fn on_event(event: SyncEvent) {
                 count_str, status_str, info.artist, info.album, info.title,
             )
         }
-        SyncEvent::Done => "All done!".to_owned(),
     };
     println!("{}", string);
 }
@@ -66,5 +65,6 @@ fn main() -> Result<()> {
     if let Err(e) = sync::run_sync(config_path, on_event) {
         println!("[Error] {}", e);
     }
+    println!("All done!");
     Ok(())
 }

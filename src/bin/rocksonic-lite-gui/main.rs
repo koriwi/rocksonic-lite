@@ -76,35 +76,36 @@ fn main() -> eframe::Result {
 
     thread::spawn(move || {
         loop {
-            if let Ok((config_path, ctx)) = rx.recv()
-                && let Err(e) = sync::run_sync(&config_path, |event| {
-                    let mut sbs = sync_button_state.write().unwrap();
-                    let mut tlg = thread_log_text.write().unwrap();
-                    match event {
-                        SyncEvent::SongFinished(info) => {
-                            on_song_finished(info, &mut sbs, &mut tlg);
-                        }
-                        SyncEvent::Started => {
-                            *sbs = SyncButtonState::InProgress(None);
-                        }
-                        SyncEvent::FileDeleted(path) => {
-                            tlg.push_str(&format!(
-                                "\nDeleting stale file {}",
-                                path.to_str().unwrap()
-                            ));
-                        }
-                        SyncEvent::Done => {
-                            *sbs = SyncButtonState::IdleDone;
-                        }
-                    };
-                    ctx.request_repaint();
-                })
-            {
-                let mut tlg = thread_log_text.write().unwrap();
+            let Ok((config_path, ctx)) = rx.recv() else {
+                continue;
+            };
+            match sync::run_sync(&config_path, |event| {
                 let mut sbs = sync_button_state.write().unwrap();
-                tlg.push_str(&format!("\n[Error] {:?}", e));
-                *sbs = SyncButtonState::IdleError;
+                let mut tlg = thread_log_text.write().unwrap();
+                match event {
+                    SyncEvent::SongFinished(info) => {
+                        on_song_finished(info, &mut sbs, &mut tlg);
+                    }
+                    SyncEvent::Started => {
+                        *sbs = SyncButtonState::InProgress(None);
+                    }
+                    SyncEvent::FileDeleted(path) => {
+                        tlg.push_str(&format!("\nDeleting stale file {}", path.to_str().unwrap()));
+                    }
+                };
                 ctx.request_repaint();
+            }) {
+                Ok(()) => {
+                    let mut sbs = sync_button_state.write().unwrap();
+                    *sbs = SyncButtonState::IdleDone;
+                }
+                Err(e) => {
+                    let mut tlg = thread_log_text.write().unwrap();
+                    let mut sbs = sync_button_state.write().unwrap();
+                    tlg.push_str(&format!("\n[Error] {:?}", e));
+                    *sbs = SyncButtonState::IdleError;
+                    ctx.request_repaint();
+                }
             };
         }
     });

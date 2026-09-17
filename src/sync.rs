@@ -46,7 +46,7 @@ where
     for path in walker_paths {
         let Ok(path_entry) = path else { continue };
 
-        let found = known_paths.contains(&path_entry.path().to_path_buf());
+        let found = known_paths.contains(path_entry.path());
 
         if !found {
             if path_entry.path().is_file() {

@@ -19,17 +19,23 @@ pub fn download_file(req_res: &mut Response, file_path: &PathBuf) -> Result<()> 
     Ok(())
 }
 
-/// tells you if the numbers are within a specific threshold
-pub fn number_good_enough(num_a: u32, num_b: u32, max_diff: f32) -> bool {
-    let mut diff = 0;
-    let mut abs_max_diff = 0;
+/// tells you the percentage difference from the larger number to the smaller number
+/// ```
+/// use rocksonic_lite::core::utils::percentage_diff;
+///
+/// let diff = percentage_diff(10, 9);
+/// approx::assert_relative_eq!(diff, 0.1);
+///
+/// let diff = percentage_diff(9, 10);
+/// approx::assert_relative_eq!(diff, 0.1);
+/// ```
+pub fn percentage_diff(num_a: u32, num_b: u32) -> f32 {
+    if num_a == num_b {
+        return 0.0;
+    }
     if num_a < num_b {
-        diff = num_b - num_a;
-        abs_max_diff = (max_diff * (num_b as f32)) as u32;
+        1.0 - (num_a as f32) / (num_b as f32)
+    } else {
+        1.0 - (num_b as f32) / (num_a as f32)
     }
-    if num_a > num_b {
-        diff = num_a - num_b;
-        abs_max_diff = (max_diff * (num_a as f32)) as u32;
-    }
-    diff <= abs_max_diff
 }

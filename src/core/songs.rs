@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    core::{responses::SubSonicSong, server::Server, utils::number_good_enough},
+    core::{responses::SubSonicSong, server::Server, utils::percentage_diff},
 };
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
@@ -62,7 +62,7 @@ pub fn song_needs_download(
     )?;
 
     // check if existing song satisfies wanted bitrate
-    if number_good_enough(bitrate as u32, mp3.properties().audio_bitrate(), 0.1) {
+    if percentage_diff(bitrate as u32, mp3.properties().audio_bitrate()) <= 0.1 {
         return Ok(false);
     };
     Ok(true)

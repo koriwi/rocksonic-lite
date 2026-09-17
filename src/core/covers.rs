@@ -1,4 +1,4 @@
-use crate::core::{songs::Action, utils::number_good_enough};
+use crate::core::{songs::Action, utils::percentage_diff};
 use anyhow::{Result, anyhow};
 use image::{ImageFormat, codecs::jpeg::JpegEncoder};
 use std::{
@@ -26,11 +26,7 @@ pub fn cover_needs_download(
         let cover_info = cover_decoder
             .info()
             .ok_or_else(|| anyhow!("JPEG: Malformed header info"))?;
-        return Ok(!number_good_enough(
-            cover_info.width as u32,
-            cover_size,
-            0.1,
-        ));
+        return Ok(percentage_diff(cover_info.width as u32, cover_size) > 0.1);
     }
     Ok(false)
 }

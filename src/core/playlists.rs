@@ -1,8 +1,39 @@
+use anyhow::{Result, anyhow};
 use std::{
+    ffi::OsString,
     format,
     fs::{self, File},
     path::{Path, PathBuf},
 };
+
+use crate::core::utils::sanitize_filename;
+
+fn create_playlist_dir(library_dir: &Path) -> Result<PathBuf> {
+    let playlist_dir: PathBuf = [library_dir.to_owned(), "../".into(), "Playlists".into()]
+        .iter()
+        .collect();
+
+    if !fs::exists(&playlist_dir)? {
+        fs::create_dir(&playlist_dir)?;
+    }
+    Ok(playlist_dir)
+}
+
+fn create_playlist_path(library_dir: &Path, playlist_name: &str) -> Result<PathBuf> {
+    let playlist_dir = create_playlist_dir(library_dir)?;
+    Ok([
+        playlist_dir.to_path_buf(),
+        format!(
+            "{}.m3u",
+            sanitize_filename(OsString::from(playlist_name.to_owned()))
+                .to_str()
+                .ok_or(anyhow!("could not convert OsString to str"))?
+        )
+        .into(),
+    ]
+    .iter()
+    .collect())
+}
 
 pub fn create_playlist(
     name: &str,
@@ -11,25 +42,16 @@ pub fn create_playlist(
 ) -> anyhow::Result<()> {
     let playlist_entries: Vec<m3u::Entry> = audio_paths
         .iter()
-        .map(|ap| {
-            let mut audio_path = PathBuf::from("../");
-            audio_path.push(ap);
-            m3u::path_entry(audio_path)
+        .map(|audio_path| {
+            m3u::path_entry(
+                ["../".into(), audio_path.to_owned()]
+                    .iter()
+                    .collect::<PathBuf>(),
+            )
         })
         .collect();
 
-    // TODO: construct this from an iterator (maybe with a function)
-    let mut playlist_dir: PathBuf = library_dir.into();
-    playlist_dir.pop(); // go up one directory, so to step out of the music dir
-    playlist_dir.push("Playlists"); // append this to point to a sibling dir on the same level
-
-    if !fs::exists(&playlist_dir)? {
-        fs::create_dir(&playlist_dir)?;
-    }
-
-    // TODO: construct this from an iterator (maybe within a function)
-    let mut playlist_path = playlist_dir;
-    playlist_path.push(format!("{}.m3u", name)); // points now to the playlist file
+    let playlist_path = create_playlist_path(library_dir, name)?;
 
     let mut file = File::create(playlist_path)?;
     let mut writer = m3u::Writer::new(&mut file);

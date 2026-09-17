@@ -108,8 +108,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/dev" > /dev/null 2>&1; then
-            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/dev" \
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/dev-build" > /dev/null 2>&1; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/dev-build" \
               -f sha="${GITHUB_SHA}" -F force=true
           fi
 

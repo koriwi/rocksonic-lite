@@ -32,6 +32,21 @@ pub enum SyncEvent {
     FileDeleted(PathBuf),
 }
 
+/// creates the library dir and returns the path to the newly create dir
+fn create_library_dir(config_path: &Path) -> Result<PathBuf> {
+    let config_file_dir = config_path.with_file_name("");
+    let config_file_name = config_path
+        .file_stem()
+        .ok_or_else(|| anyhow!("config file name is too funky"))?;
+
+    let mut library_dir = config_file_dir.clone();
+    library_dir.push(config_file_name);
+    if !fs::exists(&library_dir)? {
+        fs::create_dir(&library_dir)?;
+    }
+    Ok(library_dir)
+}
+
 pub fn run_sync<F>(config_path: &Path, emit: F) -> Result<()>
 where
     F: Fn(SyncEvent) + Sync,
@@ -40,41 +55,29 @@ where
     let config = Config::from_path(config_path)?;
     let srv = server::Server::connect(&config.server_url, &config.user, &config.password)?;
 
-    // build the target library path based on the config file name
-    // TODO: put this in a nice function
-    let config_file_dir = config_path.with_file_name("");
-    let config_file_name = config_path
-        .file_stem()
-        .ok_or_else(|| anyhow!("config file name is too funky"))?;
-
-    let mut library_dir = config_file_dir.clone();
-    library_dir.push(config_file_name);
-
-    if !fs::exists(&library_dir)? {
-        fs::create_dir(&library_dir)?;
-    }
+    let library_dir = create_library_dir(config_path)?;
 
     let song_lists = get_song_lists(&config, &srv);
 
-    // this is used for finding outdated files/directories to delete them later
+    // to keep track of all the files that we manage
     let mut known_paths: HashSet<PathBuf> = HashSet::new();
 
     let song_count: usize = song_lists
         .iter()
         .filter_map(|sl| Some(sl.as_ref().ok()?.songs.len()))
         .sum();
-    let global_counter = AtomicU64::new(1);
-    let mut success_list = vec![];
-    let mut error_list = vec![];
+    let current_song_index = AtomicU64::new(1);
+    let mut success_lists = vec![];
+    let mut error_lists = vec![];
 
-    for rsl in song_lists {
-        match rsl {
-            Ok(sl) => success_list.push(sl),
-            Err(e) => error_list.push(e),
+    for song_list_result in song_lists {
+        match song_list_result {
+            Ok(song_list) => success_lists.push(song_list),
+            Err(e) => error_lists.push(e),
         };
     }
 
-    for song_list in success_list {
+    for song_list in success_lists {
         let song_results = process_songs(
             &song_list.songs,
             &library_dir,
@@ -86,7 +89,7 @@ where
             config.threads as usize,
             |song: SubSonicSong, song_dl: bool, cover_dl: bool, cover_err: bool| {
                 emit(SyncEvent::SongFinished(SongFinishedInfo {
-                    current: global_counter.fetch_add(1, Ordering::AcqRel) as usize,
+                    current: current_song_index.fetch_add(1, Ordering::AcqRel) as usize,
                     total: song_count,
                     artist: song.artist,
                     album: song.album,
@@ -106,8 +109,8 @@ where
         known_paths.extend(song_results.paths);
     }
 
-    if !error_list.is_empty() {
-        let details = error_list
+    if !error_lists.is_empty() {
+        let details = error_lists
             .iter()
             .map(|e| format!(" - {:#}", e))
             .collect::<Vec<String>>()

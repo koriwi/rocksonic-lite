@@ -74,6 +74,7 @@ pub struct SongList {
     pub songs: Vec<SubSonicSong>,
 }
 
+/// returns a list of songs for each sync element
 pub fn get_song_lists(config: &Config, srv: &Server) -> Vec<Result<SongList>> {
     config
         .sync

@@ -101,6 +101,15 @@ pub fn get_song_lists(config: &Config, srv: &Server) -> Vec<Result<SongList>> {
                         songs: resp.album.songs,
                     })
                 }
+                "album-playlist" => {
+                    let resp = srv
+                        .get_album(elem_id)
+                        .with_context(|| format!("failed to fetch element {element}"))?;
+                    Ok(SongList {
+                        name: Some(resp.album.name),
+                        songs: resp.album.songs,
+                    })
+                }
                 _ => {
                     println!("ignoring unknown type {}", elem_type);
                     Err(anyhow!("unknown sync type"))

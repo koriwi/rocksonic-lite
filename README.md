@@ -66,6 +66,7 @@ threads: 4
 sync:
   - playlist.2f34a8c1
   - album.97bc21de
+  - album-playlist.beefbeef
 ```
 
 | Key               | Meaning                                                                             | Default         |
@@ -79,9 +80,9 @@ sync:
 | `cover_size`      | Cover width in pixels                                                               | `300`           |
 | `create_playlist` | Create an M3U file for each selected playlist                                       | `true`          |
 | `threads`         | Number of download threads                                                          | `4`             |
-| `sync`            | Entries in `playlist.<id>` or `album.<id>` form                                     | Required        |
+| `sync`            | Entries in `playlist.<id>`, `album-playlist.<id>` or `album.<id>` form              | Required        |
 
-The tool creates M3U files only for `playlist.<id>` entries. It does not create them for `album.<id>` entries.
+The tool creates M3U files only for `playlist.<id>` and `album-playlist.<id>` entries. It does not create them for `album.<id>` entries.
 
 Protect the configuration file. It contains the password as plain text.
 

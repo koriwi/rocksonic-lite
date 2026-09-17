@@ -32,6 +32,34 @@ pub enum SyncEvent {
     FileDeleted(PathBuf),
 }
 
+/// removes all "unknown" files by stepping through the tree and checking if known_paths contains
+/// it. if not -> rm
+fn rm_unmanaged_files<F>(
+    library_dir: &Path,
+    known_paths: HashSet<PathBuf>,
+    on_delete: F,
+) -> Result<()>
+where
+    F: Fn(walkdir::DirEntry),
+{
+    let walker_paths = walkdir::WalkDir::new(library_dir).contents_first(true);
+    for path in walker_paths {
+        let Ok(path_entry) = path else { continue };
+
+        let found = known_paths.contains(&path_entry.path().to_path_buf());
+
+        if !found {
+            if path_entry.path().is_file() {
+                fs::remove_file(path_entry.path())?;
+            } else {
+                fs::remove_dir(path_entry.path())?;
+            }
+            on_delete(path_entry);
+        }
+    }
+    Ok(())
+}
+
 /// creates the library dir and returns the path to the newly create dir
 fn create_library_dir(config_path: &Path) -> Result<PathBuf> {
     let config_file_dir = config_path.with_file_name("");
@@ -109,6 +137,9 @@ where
         known_paths.extend(song_results.paths);
     }
 
+    // if we encountered errors, we DO NOT remove unmanaged files as we cannot
+    // differentiate between unmanaged files and files actually wanted that already on disk
+    // from a previous sync, but failed to sync on this run. Just tell the user what failed
     if !error_lists.is_empty() {
         let details = error_lists
             .iter()
@@ -124,22 +155,9 @@ where
     // ask me how I know
     known_paths.insert(library_dir.clone());
 
-    // checks every file in the library if it is wanted, if not -> rm
-    // TODO: put this into a nice little function maybe
-    let walker_paths = walkdir::WalkDir::new(&library_dir).contents_first(true);
-    for path in walker_paths {
-        let Ok(path_entry) = path else { continue };
+    rm_unmanaged_files(&library_dir, known_paths, |dir_entry| {
+        emit(SyncEvent::FileDeleted(dir_entry.path().to_path_buf()));
+    })?;
 
-        let found = known_paths.contains(&path_entry.path().to_path_buf());
-
-        if !found {
-            if path_entry.path().is_file() {
-                fs::remove_file(path_entry.path())?;
-            } else {
-                fs::remove_dir(path_entry.path())?;
-            }
-            emit(SyncEvent::FileDeleted(path_entry.path().to_path_buf()));
-        }
-    }
     Ok(())
 }

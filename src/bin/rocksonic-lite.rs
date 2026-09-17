@@ -62,9 +62,7 @@ fn main() -> Result<()> {
             args.config
         )));
     }
-    if let Err(e) = sync::run_sync(config_path, on_event) {
-        println!("[Error] {}", e);
-    }
+    sync::run_sync(config_path, on_event)?;
     println!("All done!");
     Ok(())
 }

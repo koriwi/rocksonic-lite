@@ -105,6 +105,8 @@ where
         audio_paths = songs
             .par_iter()
             .map(|song| -> anyhow::Result<SongResult> {
+                // TODO: add error handling for downloads etc
+
                 let mut actions = vec![];
                 let paths = create_paths(library_dir, song, mp3);
                 let handle_cover = {
@@ -119,15 +121,6 @@ where
                     fs::create_dir_all(&paths.album)?;
                 }
 
-                if handle_cover
-                    && cover_needs_download(&paths.cover, cover_size as u32, upgrade_covers)?
-                {
-                    let cover_resp = srv.get_cover_art(&song.id, cover_size)?;
-                    if let Some(cover_action) = process_cover(&paths.cover, &cover_resp.bytes()?)? {
-                        actions.push(cover_action);
-                    }
-                }
-
                 // there is currently no way to get the bitrate the server has.
                 // if the local bitrate is insufficient, the insufficient file gets downloaded again
                 // as it may have been updated with a higher bitrate one, but we don't know
@@ -138,6 +131,15 @@ where
                     strip_mp3_artwork(&paths.song)?;
 
                     actions.push(Action::SongDownloaded);
+                }
+
+                if handle_cover
+                    && cover_needs_download(&paths.cover, cover_size as u32, upgrade_covers)?
+                {
+                    let cover_resp = srv.get_cover_art(&song.id, cover_size)?;
+                    if let Some(cover_action) = process_cover(&paths.cover, &cover_resp.bytes()?)? {
+                        actions.push(cover_action);
+                    }
                 }
                 Ok(SongResult {
                     song: song.clone(),
